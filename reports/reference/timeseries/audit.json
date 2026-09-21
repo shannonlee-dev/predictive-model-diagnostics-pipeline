@@ -1,0 +1,38 @@
+{
+  "seed": 42,
+  "epochs": 50,
+  "window": 30,
+  "sha256": "e69f57818556319986a9f485d55f954976161a1dae7c2e21154aadcaf8931eb2",
+  "observations": 1249,
+  "mean": 1218.7441418764301,
+  "std": 82.42879575887936,
+  "splits": {
+    "Train": {
+      "first_target": "2020-02-14",
+      "last_target": "2023-06-30",
+      "count": 844
+    },
+    "Validation": {
+      "first_target": "2023-07-03",
+      "last_target": "2024-01-02",
+      "count": 125
+    },
+    "Test": {
+      "first_target": "2024-01-03",
+      "last_target": "2024-12-31",
+      "count": 250
+    }
+  },
+  "selected_baseline": "Naive",
+  "baseline_validation_mae": {
+    "Naive": 5.986080000000007,
+    "SMA5": 9.252352000000016,
+    "SMA10": 11.428679999999979,
+    "SMA20": 15.065452000000008,
+    "EMA0.1": 12.667135276092887,
+    "EMA0.3": 8.547192846843414,
+    "EMA0.5": 7.131464329163443
+  },
+  "features": "shift(1) before rolling; input ends at target-1",
+  "protocol": "rolling one-step; observed past Test values allowed; no refit; independent hidden states"
+}

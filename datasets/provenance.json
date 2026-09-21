@@ -1,0 +1,14 @@
+{
+  "source": "https://www.federalreserve.gov/releases/h10/hist/dat00_ko.htm",
+  "publisher": "Board of Governors of the Federal Reserve System",
+  "series": "H.10 South Korean Won per USD (FRED identifier DEXKOUS)",
+  "retrieved": "2026-09-21",
+  "method": "Official HTML table retrieved through isolated web tool; rows extracted programmatically, not transcribed or generated",
+  "start": "2020-01-02",
+  "end": "2024-12-31",
+  "observations": 1249,
+  "dropped_missing": 56,
+  "weekday_rows": 1305,
+  "sha256": "e69f57818556319986a9f485d55f954976161a1dae7c2e21154aadcaf8931eb2",
+  "failed_transport": "FRED graph CSV 404; direct Federal Reserve urllib 403; isolated official HTML retrieval succeeded"
+}
