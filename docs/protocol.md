@@ -30,9 +30,9 @@ RNN/LSTM은 hidden=24, 1 layer, batch=64, AdamW lr=0.001, clip_norm=1, 최대 50
 
 ## 사람 검수
 
-error_review.csv의 suggested_tag는 자동 가설이며 human_tag와 별개다. 사람의 오분류 사례 검토는 권장되는 선택적 오류 분석 절차다. 검토한 고유 이미지에 human_tag·reviewer·notes를 작성할 수 있다. 태그는 dark_lighting, blur, low_resolution, background_clutter, occlusion, class_similarity, suspected_label_error, high_confidence_error, model_limitation 중 하나다. notes는 관찰 근거를 적는다. 과도한 해석 없이 불확실성을 기록한다. 검수 명령은 필드 완성을 확인하지만 실제로 사람이 봤는지 인증할 수는 없다.
+error_review.csv의 suggested_tag는 자동 가설이며 human_tag와 별개다. 사람의 오분류 사례 검토는 권장되는 선택적 오류 분석 절차다. 검토한 고유 이미지에 관찰한 원인의 human_tag를 작성할 수 있다. 태그는 dark_lighting, blur, low_resolution, background_clutter, occlusion, class_similarity, suspected_label_error, high_confidence_error, model_limitation 중 하나다. 과도한 해석 없이 불확실성을 기록한다. 검수 명령은 태그 형식만 확인하지만 실제로 사람이 봤는지 인증할 수는 없다.
 
-수정 후 diagnostics review --csv <경로>로 HTML/PNG 갤러리와 집계를 갱신하고 report 명령으로 보고서에 반영할 수 있다. 허용된 human_tag와 비어 있지 않은 reviewer·notes를 모두 작성한 사례만 검수 건수로 집계한다. 자동 suggested_tag만 있는 사례는 사람 검수가 아니다. 검수 통계는 분석 보조 정보이며 최소 건수나 완료 임계값은 없다. 검수가 0건이어도 정상 종료하며 중복 sample_id나 잘못된 human_tag 등 데이터 오류는 실패한다. experiments_complete는 두 실험 트랙의 정상 완료만 나타내며 사람 검수 건수와 무관하다.
+수정 후 diagnostics review --csv <경로>로 HTML/PNG 갤러리와 집계를 갱신하고 report 명령으로 보고서에 반영할 수 있다. 허용된 human_tag가 작성된 사례만 검수 건수로 집계한다. 자동 suggested_tag만 있는 사례는 사람 검수가 아니다. 검수 통계는 분석 보조 정보이며 최소 건수나 완료 임계값은 없다. 검수가 0건이어도 정상 종료하며 중복 sample_id나 잘못된 human_tag 등 데이터 오류는 실패한다. experiments_complete는 두 실험 트랙의 정상 완료만 나타내며 사람 검수 건수와 무관하다.
 
 ## 실패 대응 및 재현
 

@@ -24,8 +24,6 @@ def review_csv(tmp_path):
                 confidence=0.9,
                 suggested_tag="occlusion",
                 human_tag="",
-                reviewer="",
-                notes="",
             )
             for i in range(31)
         ]
@@ -36,11 +34,7 @@ def review_csv(tmp_path):
 @pytest.mark.parametrize("count", [0, 1, 5, 30, 31])
 def test_review_cli_succeeds_without_threshold(review_csv, count, monkeypatch, capsys):
     frame = pd.read_csv(review_csv).fillna("")
-    frame.loc[frame.index < count, ["human_tag", "reviewer", "notes"]] = [
-        "occlusion",
-        "tester",
-        "object partly hidden",
-    ]
+    frame.loc[frame.index < count, "human_tag"] = "occlusion"
     frame.to_csv(review_csv, index=False)
     monkeypatch.setattr("sys.argv", ["diagnostics", "review", "--csv", str(review_csv)])
     main()
@@ -57,12 +51,10 @@ def test_review_cli_succeeds_without_threshold(review_csv, count, monkeypatch, c
     assert (review_csv.parent / "error_gallery.png").is_file()
 
 
-@pytest.mark.parametrize("field", ["reviewer", "notes"])
 @pytest.mark.parametrize("blank", ["", "   "])
-def test_partial_review_is_not_counted(review_csv, field, blank):
+def test_blank_human_tag_is_not_counted(review_csv, blank):
     frame = pd.read_csv(review_csv).fillna("")
-    frame.loc[0, ["human_tag", "reviewer", "notes"]] = ["occlusion", "tester", "hidden"]
-    frame.loc[0, field] = blank
+    frame.loc[0, "human_tag"] = blank
     frame.to_csv(review_csv, index=False)
     assert summarize_reviews(review_csv)["reviewed"] == 0
     assert summarize_reviews(review_csv)["human_tag_counts"] == {}
@@ -89,12 +81,8 @@ def test_report_completion_depends_on_tracks(tmp_path, monkeypatch, count):
     shutil.copytree(reference, root, ignore=shutil.ignore_patterns("*.pt"))
     path = root / "vision/error_review.csv"
     frame = pd.read_csv(path).fillna("")
-    frame[["human_tag", "reviewer", "notes"]] = ""
-    frame.loc[frame.index < count, ["human_tag", "reviewer", "notes"]] = [
-        "occlusion",
-        "tester",
-        "object partly hidden",
-    ]
+    frame["human_tag"] = ""
+    frame.loc[frame.index < count, "human_tag"] = "occlusion"
     frame.to_csv(path, index=False)
     monkeypatch.setattr("sys.argv", ["diagnostics", "report", "--run", str(root)])
     main()

@@ -23,16 +23,12 @@ TAGS = {
 
 def summarize_reviews(path):
     frame = pd.read_csv(path).fillna("")
-    required = {"sample_id", "human_tag", "reviewer", "notes"}
+    required = {"sample_id", "human_tag"}
     if not required <= set(frame) or frame.sample_id.duplicated().any():
         raise ValueError(
-            "Review requires unique sample IDs and human_tag,reviewer,notes columns"
+            "Review requires unique sample IDs and human_tag columns"
         )
-    reviewed = (
-        frame.human_tag.isin(TAGS)
-        & frame.reviewer.str.strip().ne("")
-        & frame.notes.str.strip().ne("")
-    )
+    reviewed = frame.human_tag.isin(TAGS)
     invalid = frame.human_tag.ne("") & ~frame.human_tag.isin(TAGS)
     if invalid.any():
         raise ValueError("Unknown human tags")

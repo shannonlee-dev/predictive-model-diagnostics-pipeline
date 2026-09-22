@@ -21,7 +21,7 @@ flowchart TD
     TS --> ART["두 트랙의 지표 · 이력 · audit.json"]
     VS --> ART
     VS --> ERR["Validation 오분류 · error_review.csv"]
-    ERR --> REV["선택적 사람 검수: human_tag · reviewer · notes"]
+    ERR --> REV["선택적 사람 검수: human_tag"]
     REV --> REVIEW["review: 갤러리 · 검수 통계 갱신"]
     ART --> REPORT["report"]
     ERR -. "검수 통계 참고" .-> REPORT
@@ -73,7 +73,7 @@ python -m pytest -q
 ## 사람 검수 (선택)
 
 1. `reports/my-run/vision/error_gallery.html`에서 실제 Validation 오분류 이미지를 확인한다.
-2. 같은 경로의 `error_review.csv`에 검토한 사례의 `human_tag`, `reviewer`, `notes`를 작성한다. 허용 태그와 관찰 기준은 [실험 정책](docs/protocol.md)에 있다.
+2. 같은 경로의 `error_review.csv`에 검토한 사례의 `human_tag`를 작성한다. 허용 태그와 관찰 기준은 [실험 정책](docs/protocol.md)에 있다.
 3. 아래 명령으로 검수 상태와 리포트를 갱신한다.
 
 ```bash
@@ -81,7 +81,7 @@ diagnostics review --csv reports/my-run/vision/error_review.csv
 diagnostics report --run reports/my-run
 ```
 
-검수가 0건이어도 정상 종료한다. 허용된 `human_tag`와 비어 있지 않은 `reviewer`, `notes`가 모두 있어야 검수 건수로 집계한다. 중복 `sample_id`나 허용되지 않은 `human_tag` 등 잘못된 데이터는 오류로 처리한다. 두 실험 트랙이 정상 완료되면 검수 건수와 무관하게 리포트를 생성한다. 사람 태그 분포에 따라 다음 증강·정규화 실험을 결정하고 새로운 결과 폴더에 기록한다. 자동 증강 비교는 사전 지정 실험이며 사람의 원인 분석 이후 수행한 실험으로 간주하지 않는다.
+검수가 0건이어도 정상 종료한다. 허용된 `human_tag`가 있어야 검수 건수로 집계한다. 중복 `sample_id`나 허용되지 않은 `human_tag` 등 잘못된 데이터는 오류로 처리한다. 두 실험 트랙이 정상 완료되면 검수 건수와 무관하게 리포트를 생성한다. 사람 태그 분포에 따라 다음 증강·정규화 실험을 결정하고 새로운 결과 폴더에 기록한다. 자동 증강 비교는 사전 지정 실험이며 사람의 원인 분석 이후 수행한 실험으로 간주하지 않는다.
 
 ## 산출물과 출처
 

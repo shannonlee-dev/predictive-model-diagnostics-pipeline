@@ -98,8 +98,6 @@ def test_human_review_not_inferred_from_suggested_tags(tmp_path):
                 "sample_id": "1",
                 "suggested_tag": "low_resolution",
                 "human_tag": "",
-                "reviewer": "",
-                "notes": "",
             }
         ]
     ).to_csv(path, index=False)
@@ -144,8 +142,6 @@ def test_review_counts_are_informational(tmp_path, count):
         {
             "sample_id": str(i),
             "human_tag": "occlusion",
-            "reviewer": "tester",
-            "notes": "object partly hidden",
         }
         for i in range(count)
     ]
@@ -155,7 +151,7 @@ def test_review_counts_are_informational(tmp_path, count):
         "reviewed": count,
         "human_tag_counts": {"occlusion": count},
     }
-    rows[-1]["notes"] = ""
+    rows[-1]["human_tag"] = ""
     pd.DataFrame(rows).to_csv(path, index=False)
     assert summarize_reviews(path)["reviewed"] == count - 1
     rows.append(rows[0].copy())

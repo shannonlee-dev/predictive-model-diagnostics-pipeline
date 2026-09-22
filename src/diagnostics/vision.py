@@ -158,8 +158,6 @@ def export_errors(source, indices, probability, labels, output):
                 "confidence": confidence,
                 "suggested_tag": suggested,
                 "human_tag": "",
-                "reviewer": "",
-                "notes": "",
             }
         )
     columns = [
@@ -171,8 +169,6 @@ def export_errors(source, indices, probability, labels, output):
         "confidence",
         "suggested_tag",
         "human_tag",
-        "reviewer",
-        "notes",
     ]
     pd.DataFrame(rows, columns=columns).to_csv(output / "error_review.csv", index=False)
 

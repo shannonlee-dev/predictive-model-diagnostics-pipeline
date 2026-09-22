@@ -86,7 +86,7 @@ CNN은 공간상의 국소 패턴을 공유 필터로 학습한다. RNN은 순�
 
 ![실제 Validation 오분류 사례](vision/error_gallery.png)
 
-[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 기본 Fine-tuning의 실제 Validation 오분류 전체를 포함한다. suggested_tag는 밝기·신뢰도 기반 가설이다. 원한다면 human_tag, reviewer, notes에 직접 관찰 근거를 적고 diagnostics review로 갤러리와 통계를 갱신한다. 세 필드를 작성한 고유 사례만 사람 검수 및 태그별 건수에 포함한다. 검수 건수는 모델 실험 완료 조건이 아니다.
+[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 기본 Fine-tuning의 실제 Validation 오분류 전체를 포함한다. suggested_tag는 밝기·신뢰도 기반 가설이다. 원한다면 실제 관찰에 따른 human_tag를 적고 diagnostics review로 갤러리와 통계를 갱신한다. 허용된 human_tag가 작성된 고유 사례만 사람 검수 및 태그별 건수에 포함한다. 검수 건수는 모델 실험 완료 조건이 아니다.
 
 낮은 Train 정확도와 클래스 전반의 혼동은 모델/학습 예산 문제를 먼저 점검한다. 낮은 Train loss와 특정 배경·조명에 집중한 Validation 오류는 데이터 다양성 문제를 점검한다. 라벨 오류 의심은 원본 대조 후 별도 기록하고 Test 라벨을 수정해 성능을 높이지 않는다. 사람 태그의 상위 실패 원인을 바탕으로 다음 개선을 선택하고 새로운 실험 디렉터리에 기록해야 사람 분석 → 개선의 사이클이 완성된다.
 
