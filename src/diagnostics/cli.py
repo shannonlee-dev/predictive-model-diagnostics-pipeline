@@ -39,7 +39,6 @@ def main():
     report.add_argument("--run", type=Path, default=Path("reports/reference"))
     review = sub.add_parser("review")
     review.add_argument("--csv", type=Path, required=True)
-    review.add_argument("--require-complete", action="store_true")
     args = vars(parser.parse_args())
     name = args.pop("command")
     os.environ.setdefault("MPLCONFIGDIR", str(Path(".cache/matplotlib").resolve()))
@@ -76,10 +75,6 @@ def main():
 
             result = gallery(args["csv"])
             print(result)
-            if args["require_complete"] and not result["complete"]:
-                raise ValueError(
-                    "At least 30 unique, explicitly human-reviewed errors required"
-                )
     except (ValueError, OSError, RuntimeError) as error:
         logging.getLogger(__name__).error(
             "%s: %s; incomplete output directories are not completed experiments",

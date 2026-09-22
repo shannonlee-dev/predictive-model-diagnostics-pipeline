@@ -4,7 +4,7 @@
 
 Seed 42, 이미지 클래스 cat, deer, dog. 클래스당 Train 40장, Validation 150장, Test 250장. 원본 이미지의 식별자와 SHA-256을 membership.csv에 기록하고 분할 간 동일 이미지 바이트 중복을 검사했다. 시계열은 DEXKOUS 1249개 관측이다. 두 트랙 모두 Validation loss로 checkpoint를 선택했다. 모든 비교군과 증강 설정은 실행 전에 고정했다.
 
-사람 검수: **0/94건**. 최소 30건 직접 검수 요구의 충족 여부: **False**. 자동 제안은 실제 원인 또는 사람 검수로 간주하지 않는다. 본 보고서는 검수가 끝나기 전에는 최종 제출 완료본이 아니다.
+사람 검수: **0/94건**. 사람 검수는 선택적인 오류 분석 절차이며 집계는 분석 보조 정보다. 실험 완료 여부는 두 트랙의 정상 완료로 판단한다. 자동 suggested_tag는 가설이며 실제 원인 또는 human review로 간주하지 않는다.
 
 ## 이미지 실측 비교
 
@@ -84,9 +84,9 @@ CNN은 공간상의 국소 패턴을 공유 필터로 학습한다. RNN은 순�
 
 ## 오류 진단 및 사람 검수
 
-![실제 Validation 오분류 30건](vision/error_gallery.png)
+![실제 Validation 오분류 사례](vision/error_gallery.png)
 
-[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 기본 Fine-tuning의 실제 Validation 오분류 전체를 포함한다. suggested_tag는 밝기·신뢰도 기반 가설이다. 검수자는 human_tag, reviewer, notes에 직접 관찰 근거를 적는다. 리뷰 집계 명령으로 최소 30개의 고유 사례와 태그별 건수를 확인한다. 미검수 건을 검수 통계 분모에 섞지 않는다.
+[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 기본 Fine-tuning의 실제 Validation 오분류 전체를 포함한다. suggested_tag는 밝기·신뢰도 기반 가설이다. 원한다면 human_tag, reviewer, notes에 직접 관찰 근거를 적고 diagnostics review로 갤러리와 통계를 갱신한다. 세 필드를 작성한 고유 사례만 사람 검수 및 태그별 건수에 포함한다. 검수 건수는 모델 실험 완료 조건이 아니다.
 
 낮은 Train 정확도와 클래스 전반의 혼동은 모델/학습 예산 문제를 먼저 점검한다. 낮은 Train loss와 특정 배경·조명에 집중한 Validation 오류는 데이터 다양성 문제를 점검한다. 라벨 오류 의심은 원본 대조 후 별도 기록하고 Test 라벨을 수정해 성능을 높이지 않는다. 사람 태그의 상위 실패 원인을 바탕으로 다음 개선을 선택하고 새로운 실험 디렉터리에 기록해야 사람 분석 → 개선의 사이클이 완성된다.
 

@@ -16,6 +16,14 @@
     "diagnostics timeseries --csv datasets/krw_2020_2024.csv --output reports/reference/timeseries",
     "diagnostics report --run reports/reference"
   ],
-  "artifact_validation": "metric recomputation, split counts and IDs, error identity, source hash, local Markdown links, existing-output refusal, incomplete-human-review exit verified",
-  "training_note": "Training ran before formatting/import cleanup and daily-frequency input check; these changes do not change reference model computations."
+  "artifact_validation": "metric recomputation, split counts and IDs, error identity, source hash, local Markdown links, existing-output refusal",
+  "training_note": "Training ran before formatting/import cleanup and daily-frequency input check; these changes do not change reference model computations.",
+  "report_regeneration": {
+    "note": "Regenerated from existing experiment artifacts with optional human review; original training source hashes retained above.",
+    "source_sha256": {
+      "src/diagnostics/cli.py": "d8ab23213ca08a46c1a556bdeb34e7567321e44bc0c438b126fc29279fe66aae",
+      "src/diagnostics/review.py": "e2f16a9e62b680f1a42bd13afa7b9baccfe1b6663452c7e7280605f5a04a22df",
+      "src/diagnostics/report.py": "5babd2769dc2adab038eb22d360628ad0482d4b036a58fe2fae66ca0a278e9ab"
+    }
+  }
 }

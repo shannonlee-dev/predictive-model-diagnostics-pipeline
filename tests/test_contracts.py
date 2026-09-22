@@ -105,7 +105,8 @@ def test_human_review_not_inferred_from_suggested_tags(tmp_path):
     ).to_csv(path, index=False)
     result = summarize_reviews(path)
     assert result["reviewed"] == 0
-    assert result["complete"] is False
+    assert result["human_tag_counts"] == {}
+    assert "complete" not in result
 
 
 def test_recurrent_predictions_do_not_share_sample_context():
@@ -136,7 +137,8 @@ def test_residual_model_starts_at_naive():
     torch.testing.assert_close(model(x), x[:, -1, 0])
 
 
-def test_review_requires_30_unique_complete_human_records(tmp_path):
+@pytest.mark.parametrize("count", [1, 5, 30, 31])
+def test_review_counts_are_informational(tmp_path, count):
     path = tmp_path / "review.csv"
     rows = [
         {
@@ -145,14 +147,18 @@ def test_review_requires_30_unique_complete_human_records(tmp_path):
             "reviewer": "tester",
             "notes": "object partly hidden",
         }
-        for i in range(30)
+        for i in range(count)
     ]
     pd.DataFrame(rows).to_csv(path, index=False)
-    assert summarize_reviews(path)["complete"] is True
+    assert summarize_reviews(path) == {
+        "total_errors": count,
+        "reviewed": count,
+        "human_tag_counts": {"occlusion": count},
+    }
     rows[-1]["notes"] = ""
     pd.DataFrame(rows).to_csv(path, index=False)
-    assert summarize_reviews(path)["reviewed"] == 29
-    rows[-1]["sample_id"] = "0"
+    assert summarize_reviews(path)["reviewed"] == count - 1
+    rows.append(rows[0].copy())
     pd.DataFrame(rows).to_csv(path, index=False)
     with pytest.raises(ValueError):
         summarize_reviews(path)

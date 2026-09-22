@@ -20,7 +20,7 @@ def retry(operation):
         except (OSError, RuntimeError) as error:
             if attempt == 2:
                 raise RuntimeError(
-                    "Download failed after 3 attempts; use a validated local cache/CSV. No synthetic fallback."
+                    "Download failed after 3 attempts; use a validated local cache/CSV."
                 ) from error
             time.sleep(2**attempt)
 

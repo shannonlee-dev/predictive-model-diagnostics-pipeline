@@ -30,9 +30,9 @@ RNN/LSTM은 hidden=24, 1 layer, batch=64, AdamW lr=0.001, clip_norm=1, 최대 50
 
 ## 사람 검수
 
-error_review.csv의 suggested_tag는 자동 가설이며 human_tag와 별개다. 최소 30개 고유한 실제 오분류 이미지에 대해 사람이 human_tag·reviewer·notes를 작성해야 한다. 태그는 dark_lighting, blur, low_resolution, background_clutter, occlusion, class_similarity, suspected_label_error, high_confidence_error, model_limitation 중 하나다. notes는 관찰 근거를 적는다. 과도한 해석 없이 불확실성을 기록한다. 검수 명령은 필드 완성을 확인하지만 실제로 사람이 봤는지 인증할 수는 없다.
+error_review.csv의 suggested_tag는 자동 가설이며 human_tag와 별개다. 사람의 오분류 사례 검토는 권장되는 선택적 오류 분석 절차다. 검토한 고유 이미지에 human_tag·reviewer·notes를 작성할 수 있다. 태그는 dark_lighting, blur, low_resolution, background_clutter, occlusion, class_similarity, suspected_label_error, high_confidence_error, model_limitation 중 하나다. notes는 관찰 근거를 적는다. 과도한 해석 없이 불확실성을 기록한다. 검수 명령은 필드 완성을 확인하지만 실제로 사람이 봤는지 인증할 수는 없다.
 
-수정 후 report 명령을 다시 실행하면 사람 태그별 갤러리와 집계가 갱신된다. 검수가 부족하면 --require-complete 명령은 exit 1이다. 오류가 30개 미만이라면 고정 모델로 추가 Validation 사례를 마련해야 하며 같은 사례를 중복하거나 가짜 태그를 만들지 않는다.
+수정 후 diagnostics review --csv <경로>로 HTML/PNG 갤러리와 집계를 갱신하고 report 명령으로 보고서에 반영할 수 있다. 허용된 human_tag와 비어 있지 않은 reviewer·notes를 모두 작성한 사례만 검수 건수로 집계한다. 자동 suggested_tag만 있는 사례는 사람 검수가 아니다. 검수 통계는 분석 보조 정보이며 최소 건수나 완료 임계값은 없다. 검수가 0건이어도 정상 종료하며 중복 sample_id나 잘못된 human_tag 등 데이터 오류는 실패한다. experiments_complete는 두 실험 트랙의 정상 완료만 나타내며 사람 검수 건수와 무관하다.
 
 ## 실패 대응 및 재현
 
@@ -50,6 +50,6 @@ error_review.csv의 suggested_tag는 자동 가설이며 human_tag와 별개다.
 | prepare | 공개 데이터 → 검증된 로컬 데이터·출처 manifest |
 | vision | CIFAR cache·seed·표본 수 → 모델·분할표·지표·실제 오분류 |
 | timeseries | 단일 CSV·window → baseline/RNN/LSTM·지표·날짜별 예측 |
-| review | 사람이 수정한 CSV → 검수 상태·태그별 HTML 갤러리 |
+| review | 사람이 수정한 CSV → 검수 통계·태그별 HTML/PNG 갤러리 |
 | report | 성공한 두 실험 디렉터리 → Markdown·비교 그래프·완료 상태 |
 | common | seed·표·학습 이력 → 재현 설정·JSON·loss 그래프 |

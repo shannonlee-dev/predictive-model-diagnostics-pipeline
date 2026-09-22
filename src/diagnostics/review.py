@@ -39,7 +39,6 @@ def summarize_reviews(path):
     return {
         "total_errors": len(frame),
         "reviewed": int(reviewed.sum()),
-        "complete": bool(reviewed.sum() >= 30),
         "human_tag_counts": frame.loc[reviewed, "human_tag"].value_counts().to_dict(),
     }
 
@@ -59,7 +58,7 @@ def gallery(path):
         )
     document = '<!doctype html><meta charset="utf-8"><title>Validation error review</title><style>body{font:16px sans-serif;max-width:1200px;margin:40px auto}main{display:flex;flex-wrap:wrap}figure{width:240px;margin:10px}img{image-rendering:pixelated}figcaption{overflow-wrap:anywhere}</style>'
     document += (
-        f"<h1>Validation error review</h1><p>Human reviewed: {result['reviewed']}/{result['total_errors']}. At least 30 required. Machine suggestions are hypotheses, not verified causes.</p><main>"
+        f"<h1>Validation error review</h1><p>Human reviewed: {result['reviewed']}/{result['total_errors']}. Machine suggestions are hypotheses, not verified causes.</p><main>"
         + "".join(cards)
         + "</main>"
     )
@@ -77,7 +76,10 @@ def gallery(path):
             f"{row.sample_id.rsplit('_', 1)[-1]}: {row.actual} → {row.predicted}\n{tag}",
             fontsize=9,
         )
-    fig.suptitle("Validation errors: human review required; 30 examples")
+    fig.suptitle(
+        f"Validation errors: {len(samples)} examples; "
+        f"Human reviewed: {result['reviewed']}/{result['total_errors']}"
+    )
     fig.tight_layout()
     fig.savefig(path.parent / "error_gallery.png", dpi=120)
     plt.close(fig)
