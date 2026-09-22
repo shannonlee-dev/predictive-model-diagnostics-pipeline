@@ -9,7 +9,30 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from .common import loss_plot, seed_everything, sha256, write_json
+from .constants import (
+    DEFAULT_SEED,
+    TIMESERIES_DEFAULT_EPOCHS,
+    TIMESERIES_DEFAULT_WINDOW,
+)
+from .io import sha256, write_json
+from .plotting import loss_plot
+from .reproducibility import seed_everything
+
+TRAIN_RATIO = 0.7
+VALIDATION_RATIO = 0.8
+MIN_OBSERVATIONS = 700
+MIN_SPAN_DAYS = 1095
+MAPE_ZERO_THRESHOLD = 1e-8
+BASELINE_SMA_WINDOWS = (5, 10, 20)
+BASELINE_EMA_ALPHAS = (0.1, 0.3, 0.5)
+RECURRENT_HIDDEN_SIZE = 24
+RECURRENT_BATCH_SIZE = 64
+RECURRENT_LEARNING_RATE = 0.001
+RESIDUAL_WEIGHT_DECAY = 0.01
+GRADIENT_CLIP_NORM = 1.0
+EARLY_STOPPING_PATIENCE = 8
+DEFAULT_EPOCHS = TIMESERIES_DEFAULT_EPOCHS
+DEFAULT_WINDOW = TIMESERIES_DEFAULT_WINDOW
 
 
 def load_series(path):
@@ -25,7 +48,10 @@ def load_series(path):
     if not np.isfinite(frame.value).all() or (frame.value <= 0).any():
         raise ValueError("Values must be finite and positive")
     frame = frame.sort_values("date").reset_index(drop=True)
-    if len(frame) < 700 or (frame.date.iloc[-1] - frame.date.iloc[0]).days < 1095:
+    if (
+        len(frame) < MIN_OBSERVATIONS
+        or (frame.date.iloc[-1] - frame.date.iloc[0]).days < MIN_SPAN_DAYS
+    ):
         raise ValueError("At least three years and 700 daily observations required")
     if frame.date.diff().dropna().median() != pd.Timedelta(days=1):
         raise ValueError("Expected daily observations, allowing weekends and holidays")
@@ -35,7 +61,7 @@ def load_series(path):
 def prepare_series(frame, window):
     values = frame.value.to_numpy(dtype=float)
     n = len(values)
-    train_end, validation_end = int(n * 0.7), int(n * 0.8)
+    train_end, validation_end = int(n * TRAIN_RATIO), int(n * VALIDATION_RATIO)
     if not 1 <= window < train_end or validation_end == train_end:
         raise ValueError("Window must fit strictly within Train")
     mean, std = float(values[:train_end].mean()), float(values[:train_end].std())
@@ -63,9 +89,9 @@ def baseline_predictions(values):
     series = pd.Series(values)
     past = series.shift(1)  # Features constructed before slicing, always causal.
     result = {"Naive": past.to_numpy()}
-    for window in (5, 10, 20):
+    for window in BASELINE_SMA_WINDOWS:
         result[f"SMA{window}"] = past.rolling(window).mean().to_numpy()
-    for alpha in (0.1, 0.3, 0.5):
+    for alpha in BASELINE_EMA_ALPHAS:
         result[f"EMA{alpha}"] = past.ewm(alpha=alpha, adjust=False).mean().to_numpy()
     return result
 
@@ -80,7 +106,7 @@ def metrics(actual, predicted):
     ):
         raise ValueError("Metrics require aligned nonempty finite arrays")
     error = actual - predicted
-    nonzero = np.abs(actual) > 1e-8
+    nonzero = np.abs(actual) > MAPE_ZERO_THRESHOLD
     return {
         "MAE": float(np.abs(error).mean()),
         "RMSE": float(np.sqrt(np.square(error).mean())),
@@ -92,7 +118,7 @@ def metrics(actual, predicted):
 
 
 class RecurrentForecaster(nn.Module):
-    def __init__(self, kind="LSTM", hidden=24, residual=False):
+    def __init__(self, kind="LSTM", hidden=RECURRENT_HIDDEN_SIZE, residual=False):
         super().__init__()
         self.core = (nn.LSTM if kind == "LSTM" else nn.RNN)(1, hidden, batch_first=True)
         self.head = nn.Linear(hidden, 1)
@@ -111,13 +137,15 @@ def train_model(prepared, kind, epochs, seed, residual=False):
     seed_everything(seed)
     model = RecurrentForecaster(kind, residual=residual)
     optimizer = torch.optim.AdamW(
-        model.parameters(), lr=0.001, weight_decay=0.01 if residual else 0
+        model.parameters(),
+        lr=RECURRENT_LEARNING_RATE,
+        weight_decay=RESIDUAL_WEIGHT_DECAY if residual else 0,
     )
     X, y = torch.from_numpy(prepared["X"]), torch.from_numpy(prepared["y"])
     indices = prepared["indices"]
     loader = DataLoader(
         TensorDataset(X[indices["Train"]], y[indices["Train"]]),
-        batch_size=64,
+        batch_size=RECURRENT_BATCH_SIZE,
         shuffle=False,
     )
     best, best_loss, stale = None, float("inf"), 0
@@ -128,7 +156,7 @@ def train_model(prepared, kind, epochs, seed, residual=False):
             optimizer.zero_grad()
             loss = nn.functional.mse_loss(model(inputs), target)
             loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            nn.utils.clip_grad_norm_(model.parameters(), GRADIENT_CLIP_NORM)
             optimizer.step()
         model.eval()
         with torch.no_grad():
@@ -146,7 +174,7 @@ def train_model(prepared, kind, epochs, seed, residual=False):
             )
         else:
             stale += 1
-        if stale >= 8:
+        if stale >= EARLY_STOPPING_PATIENCE:
             break
     model.load_state_dict(best)
     model.eval()
@@ -158,7 +186,7 @@ def train_model(prepared, kind, epochs, seed, residual=False):
     return model, pd.DataFrame(history), prediction
 
 
-def run(csv, output, epochs=50, seed=42, window=30):
+def run(csv, output, epochs=DEFAULT_EPOCHS, seed=DEFAULT_SEED, window=DEFAULT_WINDOW):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     frame = load_series(csv)

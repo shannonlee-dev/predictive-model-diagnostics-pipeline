@@ -10,16 +10,52 @@ from torch import nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import datasets, models, transforms
 
-from .common import loss_plot, seed_everything, sha256, write_json
+from .constants import (
+    DEFAULT_SEED,
+    MODEL_NAME,
+    PRETRAINED_WEIGHTS,
+    VISION_DEFAULT_EPOCHS,
+    VISION_DEFAULT_SHOTS,
+    VISION_DEFAULT_TEST_PER_CLASS,
+    VISION_DEFAULT_VALIDATION,
+    VISION_STRATEGIES,
+)
+from .io import sha256, write_json
+from .plotting import loss_plot
+from .reproducibility import seed_everything
 
 CLASSES = [3, 4, 5]
 NAMES = ["cat", "deer", "dog"]
 MEAN, STD = [0.485, 0.456, 0.406], [0.229, 0.224, 0.225]
+INPUT_SIZE = 128
+TRAIN_BATCH_SIZE = 24
+EVALUATION_BATCH_SIZE = 32
+EARLY_STOPPING_PATIENCE = 4
+LINEAR_PROBE_LEARNING_RATE = 0.001
+DEFAULT_LEARNING_RATE = 0.0003
+AUGMENTED_WEIGHT_DECAY = 0.01
+AUGMENT_BRIGHTNESS = 0.3
+AUGMENT_CONTRAST = 0.2
+AUGMENT_CROP_PADDING = 12
+AUGMENT_FLIP_PROBABILITY = 0.5
+LOW_BRIGHTNESS_THRESHOLD = 0.25
+HIGH_CONFIDENCE_THRESHOLD = 0.8
+DEFAULT_EPOCHS = VISION_DEFAULT_EPOCHS
+DEFAULT_SHOTS = VISION_DEFAULT_SHOTS
+DEFAULT_VALIDATION = VISION_DEFAULT_VALIDATION
+DEFAULT_TEST_PER_CLASS = VISION_DEFAULT_TEST_PER_CLASS
+MAX_SHOTS_PER_CLASS = 49
 
 
 def split_indices(labels, classes, shots, validation, seed):
-    if not 1 <= shots < 50 or validation < 1 or len(set(classes)) != len(classes):
-        raise ValueError("Use 1–49 Train images per class and nonempty Validation")
+    if (
+        not 1 <= shots <= MAX_SHOTS_PER_CLASS
+        or validation < 1
+        or len(set(classes)) != len(classes)
+    ):
+        raise ValueError(
+            f"Use 1–{MAX_SHOTS_PER_CLASS} Train images per class and nonempty Validation"
+        )
     rng = np.random.default_rng(seed)
     result = {"Train": [], "Validation": []}
     for cls in classes:
@@ -34,7 +70,7 @@ def split_indices(labels, classes, shots, validation, seed):
 
 def build_model(strategy, pretrained=True):
     model = models.resnet18(
-        weights=models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
+        weights=models.ResNet18_Weights[PRETRAINED_WEIGHTS] if pretrained else None
     )
     model.fc = nn.Linear(model.fc.in_features, len(CLASSES))
     if strategy == "linear_probe":
@@ -44,12 +80,16 @@ def build_model(strategy, pretrained=True):
 
 
 def preprocessing(augment=False):
-    steps = [transforms.Resize((128, 128))]
+    steps = [transforms.Resize((INPUT_SIZE, INPUT_SIZE))]
     if augment:
         steps += [
-            transforms.RandomHorizontalFlip(),
-            transforms.ColorJitter(brightness=0.3, contrast=0.2),
-            transforms.RandomCrop(128, padding=12, padding_mode="reflect"),
+            transforms.RandomHorizontalFlip(p=AUGMENT_FLIP_PROBABILITY),
+            transforms.ColorJitter(
+                brightness=AUGMENT_BRIGHTNESS, contrast=AUGMENT_CONTRAST
+            ),
+            transforms.RandomCrop(
+                INPUT_SIZE, padding=AUGMENT_CROP_PADDING, padding_mode="reflect"
+            ),
         ]
     return transforms.Compose(
         steps + [transforms.ToTensor(), transforms.Normalize(MEAN, STD)]
@@ -96,8 +136,12 @@ def evaluate(model, loader):
 def fit(model, strategy, train_loader, evaluation, epochs):
     optimizer = torch.optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
-        lr=0.001 if strategy == "linear_probe" else 0.0003,
-        weight_decay=0.01 if strategy == "augmented" else 0.0,
+        lr=(
+            LINEAR_PROBE_LEARNING_RATE
+            if strategy == "linear_probe"
+            else DEFAULT_LEARNING_RATE
+        ),
+        weight_decay=AUGMENTED_WEIGHT_DECAY if strategy == "augmented" else 0.0,
     )
     history, best, best_loss, stale = [], None, float("inf"), 0
     for epoch in range(1, epochs + 1):
@@ -125,7 +169,7 @@ def fit(model, strategy, train_loader, evaluation, epochs):
             )
         else:
             stale += 1
-        if stale >= 4:
+        if stale >= EARLY_STOPPING_PATIENCE:
             break
     model.load_state_dict(best)
     return pd.DataFrame(history)
@@ -145,8 +189,12 @@ def export_errors(source, indices, probability, labels, output):
         confidence = float(probability[position].max())
         suggested = (
             "dark_lighting"
-            if brightness < 0.25
-            else ("high_confidence_error" if confidence > 0.8 else "class_similarity")
+            if brightness < LOW_BRIGHTNESS_THRESHOLD
+            else (
+                "high_confidence_error"
+                if confidence > HIGH_CONFIDENCE_THRESHOLD
+                else "class_similarity"
+            )
         )
         rows.append(
             {
@@ -173,7 +221,15 @@ def export_errors(source, indices, probability, labels, output):
     pd.DataFrame(rows, columns=columns).to_csv(output / "error_review.csv", index=False)
 
 
-def run(data, output, epochs=10, seed=42, shots=40, validation=150, test_per_class=250):
+def run(
+    data,
+    output,
+    epochs=DEFAULT_EPOCHS,
+    seed=DEFAULT_SEED,
+    shots=DEFAULT_SHOTS,
+    validation=DEFAULT_VALIDATION,
+    test_per_class=DEFAULT_TEST_PER_CLASS,
+):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     seed_everything(seed)
@@ -219,17 +275,19 @@ def run(data, output, epochs=10, seed=42, shots=40, validation=150, test_per_cla
         row["sha256"] = digest
     pd.DataFrame(membership).to_csv(output / "membership.csv", index=False)
     evaluation = {
-        s: DataLoader(Images(train_source, ids), batch_size=32)
+        s: DataLoader(Images(train_source, ids), batch_size=EVALUATION_BATCH_SIZE)
         for s, ids in indices.items()
     }
-    test_loader = DataLoader(Images(test_source, test_indices), batch_size=32)
+    test_loader = DataLoader(
+        Images(test_source, test_indices), batch_size=EVALUATION_BATCH_SIZE
+    )
     rows = []
-    for strategy in ["scratch", "linear_probe", "fine_tune", "augmented"]:
+    for strategy in VISION_STRATEGIES:
         seed_everything(seed)
         model = build_model(strategy, pretrained=strategy != "scratch")
         train_loader = DataLoader(
             Images(train_source, indices["Train"], strategy == "augmented"),
-            batch_size=24,
+            batch_size=TRAIN_BATCH_SIZE,
             shuffle=True,
         )
         history = fit(model, strategy, train_loader, evaluation, epochs)
@@ -269,9 +327,9 @@ def run(data, output, epochs=10, seed=42, shots=40, validation=150, test_per_cla
             "shots": shots,
             "validation_per_class": validation,
             "test_per_class": test_per_class,
-            "model": "ResNet18",
-            "weights": "IMAGENET1K_V1",
-            "input_size": 128,
+            "model": MODEL_NAME,
+            "weights": PRETRAINED_WEIGHTS,
+            "input_size": INPUT_SIZE,
             "mean": MEAN,
             "std": STD,
             "membership_sha256": sha256(output / "membership.csv"),

@@ -6,7 +6,8 @@ from pathlib import Path
 import pandas as pd
 from PIL import Image
 
-from .common import plt, write_json
+from .io import write_json
+from .plotting import plt
 
 TAGS = {
     "dark_lighting",
@@ -25,9 +26,8 @@ def summarize_reviews(path):
     frame = pd.read_csv(path).fillna("")
     required = {"sample_id", "human_tag"}
     if not required <= set(frame) or frame.sample_id.duplicated().any():
-        raise ValueError(
-            "Review requires unique sample IDs and human_tag columns"
-        )
+        raise ValueError("Review requires unique sample IDs and human_tag columns")
+    frame["human_tag"] = frame.human_tag.str.strip()
     reviewed = frame.human_tag.isin(TAGS)
     invalid = frame.human_tag.ne("") & ~frame.human_tag.isin(TAGS)
     if invalid.any():
@@ -43,6 +43,7 @@ def gallery(path):
     path = Path(path)
     frame = pd.read_csv(path).fillna("")
     result = summarize_reviews(path)
+    frame["human_tag"] = frame.human_tag.str.strip()
     write_json(path.parent / "review_status.json", result)
     cards = []
     for _, r in frame.sort_values(

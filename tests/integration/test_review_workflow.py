@@ -76,7 +76,7 @@ def test_review_cli_rejects_invalid_data(review_csv, invalid, monkeypatch):
 
 @pytest.mark.parametrize("count", [0, 5])
 def test_report_completion_depends_on_tracks(tmp_path, monkeypatch, count):
-    reference = Path(__file__).resolve().parents[1] / "reports/reference"
+    reference = Path(__file__).resolve().parents[2] / "reports/reference"
     root = tmp_path / "run"
     shutil.copytree(reference, root, ignore=shutil.ignore_patterns("*.pt"))
     path = root / "vision/error_review.csv"
@@ -92,7 +92,65 @@ def test_report_completion_depends_on_tracks(tmp_path, monkeypatch, count):
     assert "complete" not in status["human_review"]
     assert "submission_ready" not in status
     assert "선택적인 오류 분석" in (root / "diagnosis.md").read_text()
+    before = {
+        p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
+    }
     (root / "timeseries/audit.json").unlink()
     with pytest.raises(SystemExit) as error:
         main()
     assert error.value.code == 1
+    del before[Path("timeseries/audit.json")]
+    assert before == {
+        p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
+    }
+
+
+@pytest.mark.parametrize("bad_input", ["metrics", "history", "prediction"])
+def test_report_invalid_input_does_not_modify_artifacts(tmp_path, bad_input):
+    from diagnostics.report import run
+
+    root = tmp_path / "run"
+    reference = Path(__file__).resolve().parents[2] / "reports/reference"
+    shutil.copytree(reference, root, ignore=shutil.ignore_patterns("*.pt"))
+    if bad_input == "metrics":
+        path = root / "timeseries/metrics.csv"
+        frame = pd.read_csv(path)
+        frame.loc[0, "MAE"] = float("inf")
+    elif bad_input == "history":
+        path = root / "timeseries/RNN_history.csv"
+        frame = pd.read_csv(path).iloc[:0]
+    else:
+        path = root / "vision/scratch_Test_predictions.csv"
+        frame = pd.read_csv(path)
+        frame.loc[0, "actual"] = 99
+    frame.to_csv(path, index=False)
+    before = {
+        p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
+    }
+    with pytest.raises(ValueError):
+        run(root)
+    assert before == {
+        p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
+    }
+
+
+def test_report_uses_run_metadata(tmp_path):
+    from diagnostics.report import run
+
+    root = tmp_path / "run"
+    reference = Path(__file__).resolve().parents[2] / "reports/reference"
+    shutil.copytree(reference, root, ignore=shutil.ignore_patterns("*.pt"))
+    for track, fields in [
+        ("vision", {"classes": ["a", "b", "c"], "input_size": 64}),
+        ("timeseries", {"window": 12}),
+    ]:
+        path = root / track / "audit.json"
+        audit = json.loads(path.read_text())
+        audit.update(fields)
+        path.write_text(json.dumps(audit))
+    run(root)
+    document = (root / "diagnosis.md").read_text()
+    assert "64×64" in document
+    assert "a, b, c" in document
+    assert "12개 관측값" in document
+    assert "{{" not in document

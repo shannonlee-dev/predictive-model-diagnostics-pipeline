@@ -1,22 +1,8 @@
+"""Small file and tabular serialization helpers."""
+
 import hashlib
 import json
-import random
 from pathlib import Path
-
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-
-
-def seed_everything(seed):
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.set_num_threads(4)
-    torch.use_deterministic_algorithms(True)
 
 
 def write_json(path, value):
@@ -27,17 +13,6 @@ def write_json(path, value):
 
 def sha256(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
-
-
-def loss_plot(history, path, title):
-    fig, ax = plt.subplots(figsize=(7, 4))
-    ax.plot(history["epoch"], history["Train"], label="Train")
-    ax.plot(history["epoch"], history["Validation"], label="Validation")
-    ax.set(xlabel="Epoch", ylabel="Loss", title=title)
-    ax.legend()
-    fig.tight_layout()
-    fig.savefig(path, dpi=140)
-    plt.close(fig)
 
 
 def markdown_table(frame):

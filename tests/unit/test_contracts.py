@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from diagnostics.constants import DEFAULT_SEED
+from diagnostics.prepare import series_metadata
 from diagnostics.review import summarize_reviews
 from diagnostics.timeseries import (
     baseline_predictions,
@@ -207,3 +209,27 @@ def test_monthly_observations_cannot_pass_as_daily(tmp_path):
     data.to_csv(path, index=False)
     with pytest.raises(ValueError, match="daily"):
         load_series(path)
+
+
+def test_series_metadata_is_derived_from_observed_dates():
+    data = pd.DataFrame(
+        {
+            "date": pd.to_datetime(
+                ["2020-01-01", "2020-01-02", "2020-01-06", "2020-01-08"]
+            ),
+            "value": [1.0, 2.0, 3.0, 4.0],
+        }
+    )
+    assert series_metadata(data) == {
+        "start": "2020-01-01",
+        "end": "2020-01-08",
+        "observations": 4,
+        "dropped_missing": 2,
+    }
+
+
+def test_default_seed_is_shared_by_cli_and_experiments():
+    from diagnostics.cli import DEFAULT_SEED as cli_seed
+    from diagnostics.timeseries import DEFAULT_SEED as timeseries_seed
+
+    assert cli_seed == timeseries_seed == DEFAULT_SEED == 42

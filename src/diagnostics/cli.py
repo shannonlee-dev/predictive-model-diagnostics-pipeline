@@ -3,8 +3,22 @@ import logging
 import os
 from pathlib import Path
 
+from .constants import (
+    DEFAULT_DATA_DIR,
+    DEFAULT_REPORT_DIR,
+    DEFAULT_SEED,
+    DEFAULT_SERIES_CSV,
+    PRETRAINED_CHECKPOINT,
+    TIMESERIES_DEFAULT_EPOCHS,
+    TIMESERIES_DEFAULT_WINDOW,
+    VISION_DEFAULT_EPOCHS,
+    VISION_DEFAULT_SHOTS,
+    VISION_DEFAULT_TEST_PER_CLASS,
+    VISION_DEFAULT_VALIDATION,
+)
 
-def positive(value):
+
+def _positive(value):
     value = int(value)
     if value < 1:
         raise argparse.ArgumentTypeError("must be positive")
@@ -17,26 +31,40 @@ def main():
     )
     sub = parser.add_subparsers(dest="command", required=True)
     prepare = sub.add_parser("prepare")
-    prepare.add_argument("--data", type=Path, default=Path("data"))
+    prepare.add_argument("--data", type=Path, default=DEFAULT_DATA_DIR)
     for name in ["timeseries", "vision"]:
         command = sub.add_parser(name)
         command.add_argument("--output", type=Path, required=True)
         command.add_argument(
-            "--epochs", type=positive, default=50 if name == "timeseries" else 10
+            "--epochs",
+            type=_positive,
+            default=(
+                TIMESERIES_DEFAULT_EPOCHS
+                if name == "timeseries"
+                else VISION_DEFAULT_EPOCHS
+            ),
         )
-        command.add_argument("--seed", type=int, default=42)
+        command.add_argument("--seed", type=int, default=DEFAULT_SEED)
         if name == "timeseries":
+            command.add_argument("--csv", type=Path, default=DEFAULT_SERIES_CSV)
             command.add_argument(
-                "--csv", type=Path, default=Path("datasets/krw_2020_2024.csv")
+                "--window", type=_positive, default=TIMESERIES_DEFAULT_WINDOW
             )
-            command.add_argument("--window", type=positive, default=30)
         else:
-            command.add_argument("--data", type=Path, default=Path("data"))
-            command.add_argument("--shots", type=positive, default=40)
-            command.add_argument("--validation", type=positive, default=150)
-            command.add_argument("--test-per-class", type=positive, default=250)
+            command.add_argument("--data", type=Path, default=DEFAULT_DATA_DIR)
+            command.add_argument(
+                "--shots", type=_positive, default=VISION_DEFAULT_SHOTS
+            )
+            command.add_argument(
+                "--validation", type=_positive, default=VISION_DEFAULT_VALIDATION
+            )
+            command.add_argument(
+                "--test-per-class",
+                type=_positive,
+                default=VISION_DEFAULT_TEST_PER_CLASS,
+            )
     report = sub.add_parser("report")
-    report.add_argument("--run", type=Path, default=Path("reports/reference"))
+    report.add_argument("--run", type=Path, default=DEFAULT_REPORT_DIR)
     review = sub.add_parser("review")
     review.add_argument("--csv", type=Path, required=True)
     args = vars(parser.parse_args())
@@ -57,9 +85,7 @@ def main():
 
             torch.hub.set_dir(str(args["data"] / "weights"))
             # Prevent implicit internet access in offline experiments.
-            if not (
-                args["data"] / "weights/checkpoints/resnet18-f37072fd.pth"
-            ).is_file():
+            if not (args["data"] / PRETRAINED_CHECKPOINT).is_file():
                 raise FileNotFoundError(
                     "Run prepare first: pretrained ResNet18 weights missing"
                 )
