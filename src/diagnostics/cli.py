@@ -8,13 +8,13 @@ from .constants import (
     DEFAULT_REPORT_DIR,
     DEFAULT_SEED,
     DEFAULT_SERIES_CSV,
-    PRETRAINED_CHECKPOINT,
+    RESNET18_CHECKPOINT_PATH,
     TIMESERIES_DEFAULT_EPOCHS,
     TIMESERIES_DEFAULT_WINDOW,
     VISION_DEFAULT_EPOCHS,
-    VISION_DEFAULT_SHOTS,
+    VISION_DEFAULT_SHOTS_PER_CLASS,
     VISION_DEFAULT_TEST_PER_CLASS,
-    VISION_DEFAULT_VALIDATION,
+    VISION_DEFAULT_VALIDATION_PER_CLASS,
 )
 
 
@@ -53,10 +53,12 @@ def main():
         else:
             command.add_argument("--data", type=Path, default=DEFAULT_DATA_DIR)
             command.add_argument(
-                "--shots", type=_positive, default=VISION_DEFAULT_SHOTS
+                "--shots", type=_positive, default=VISION_DEFAULT_SHOTS_PER_CLASS
             )
             command.add_argument(
-                "--validation", type=_positive, default=VISION_DEFAULT_VALIDATION
+                "--validation",
+                type=_positive,
+                default=VISION_DEFAULT_VALIDATION_PER_CLASS,
             )
             command.add_argument(
                 "--test-per-class",
@@ -85,7 +87,7 @@ def main():
 
             torch.hub.set_dir(str(args["data"] / "weights"))
             # Prevent implicit internet access in offline experiments.
-            if not (args["data"] / PRETRAINED_CHECKPOINT).is_file():
+            if not (args["data"] / RESNET18_CHECKPOINT_PATH).is_file():
                 raise FileNotFoundError(
                     "Run prepare first: pretrained ResNet18 weights missing"
                 )

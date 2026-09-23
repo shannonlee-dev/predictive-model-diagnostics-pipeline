@@ -7,22 +7,22 @@ from ..constants import TIMESERIES_MODELS
 from ..io import markdown_table
 from .analysis import HIGH_VARIANCE_RATIO
 
-TOKEN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z_0-9]*)\s*\}\}")
+TEMPLATE_TOKEN_PATTERN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z_0-9]*)\s*\}\}")
 
 
 def render_template(path, context):
     """Substitute each token once; context values are never interpreted as templates."""
 
-    def replace(match):
+    def _replace(match):
         name = match.group(1)
         if name not in context:
             raise ValueError(f"Missing report template value: {name}")
         return str(context[name])
 
-    return TOKEN.sub(replace, Path(path).read_text(encoding="utf-8"))
+    return TEMPLATE_TOKEN_PATTERN.sub(_replace, Path(path).read_text(encoding="utf-8"))
 
 
-def format_percent(value):
+def _format_percent(value):
     return "N/A" if value != value else f"{value:.2f}"
 
 
@@ -61,7 +61,7 @@ def build_report_context(data, diagnosis, summary):
             ]
         ),
         "series_metrics_table": markdown_table(series_metrics),
-        "residual_gain": format_percent(summary["residual_gain"]),
+        "residual_gain": _format_percent(summary["residual_gain"]),
         "selected_baseline": series_audit["selected_baseline"],
         "rnn_mae": f"{summary['rnn_mae']:.4f}",
         "lstm_mae": f"{summary['lstm_mae']:.4f}",

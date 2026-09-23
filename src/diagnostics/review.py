@@ -9,7 +9,7 @@ from PIL import Image
 from .io import write_json
 from .plotting import plt
 
-TAGS = {
+ALLOWED_REVIEW_TAGS = {
     "dark_lighting",
     "blur",
     "low_resolution",
@@ -28,8 +28,8 @@ def summarize_reviews(path):
     if not required <= set(frame) or frame.sample_id.duplicated().any():
         raise ValueError("Review requires unique sample IDs and human_tag columns")
     frame["human_tag"] = frame.human_tag.str.strip()
-    reviewed = frame.human_tag.isin(TAGS)
-    invalid = frame.human_tag.ne("") & ~frame.human_tag.isin(TAGS)
+    reviewed = frame.human_tag.isin(ALLOWED_REVIEW_TAGS)
+    invalid = frame.human_tag.ne("") & ~frame.human_tag.isin(ALLOWED_REVIEW_TAGS)
     if invalid.any():
         raise ValueError("Unknown human tags")
     return {

@@ -8,10 +8,10 @@ from ..constants import TIMESERIES_MODELS
 
 PERCENT_SCALE = 100
 HIGH_VARIANCE_RATIO = 1.5
-LOSS_COLUMNS = ("MAE", "RMSE", "MAPE")
+ERROR_METRIC_COLUMNS = ("MAE", "RMSE", "MAPE")
 
 
-def improvement_percent(baseline, measured):
+def _improvement_percent(baseline, measured):
     """Undefined improvements (zero or missing baseline) remain missing."""
     if pd.isna(baseline) or pd.isna(measured) or baseline == 0:
         return float("nan")
@@ -27,16 +27,16 @@ def build_baseline_comparison(metrics, neural_models=TIMESERIES_MODELS):
                 "model": model,
                 "baseline": baseline,
                 **{
-                    metric: improvement_percent(
+                    metric: _improvement_percent(
                         rows.loc[baseline, metric], rows.loc[model, metric]
                     )
-                    for metric in LOSS_COLUMNS
+                    for metric in ERROR_METRIC_COLUMNS
                 },
             }
             for model in neural_models
             for baseline in baselines
         ],
-        columns=["model", "baseline", *LOSS_COLUMNS],
+        columns=["model", "baseline", *ERROR_METRIC_COLUMNS],
     )
 
 
@@ -113,7 +113,7 @@ def build_report_summary(image_metrics, series_metrics, predictions, train_mean)
             - image_test.loc["fine_tune", "accuracy"]
         )
         * PERCENT_SCALE,
-        "residual_gain": improvement_percent(lstm, residual),
+        "residual_gain": _improvement_percent(lstm, residual),
         "rnn_mae": series_test.loc["RNN", "MAE"],
         "lstm_mae": lstm,
         "test_train_drift": predictions.actual.mean() - train_mean,

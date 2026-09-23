@@ -23,7 +23,7 @@ class ReportInputs:
     image_predictions: dict
 
 
-def read_table(path, columns, numeric=(), unique=()):
+def _read_table(path, columns, numeric=(), unique=()):
     table = pd.read_csv(path)
     if table.empty or not set(columns) <= set(table):
         raise ValueError(f"{path}: expected nonempty table with columns {columns}")
@@ -61,13 +61,13 @@ def load_report_inputs(root):
             raise ValueError(f"Incomplete audit: required fields {required}")
     if not ia["classes"]:
         raise ValueError("Image audit must contain classes")
-    im = read_table(
+    im = _read_table(
         image / "metrics.csv",
         ("model", "split", "loss", "accuracy"),
         ("loss", "accuracy"),
         ("model", "split"),
     )
-    tm = read_table(
+    tm = _read_table(
         series / "metrics.csv",
         ("model", "MAE", "RMSE", "MAPE"),
         ("MAE", "RMSE"),
@@ -83,7 +83,7 @@ def load_report_inputs(root):
     tm["MAPE"] = pd.to_numeric(tm.MAPE, errors="raise")
     if np.isinf(tm.MAPE).any() or (tm[["MAE", "RMSE", "MAPE"]] < 0).any().any():
         raise ValueError("Metrics must be nonnegative and not infinite")
-    predictions = read_table(
+    predictions = _read_table(
         series / "predictions.csv",
         ("date", "actual", "LSTM", "LSTM_residual", "Naive"),
         ("actual", "LSTM", "LSTM_residual", "Naive"),
@@ -98,7 +98,7 @@ def load_report_inputs(root):
         ("timeseries", TIMESERIES_MODELS),
     ]:
         for model in models:
-            table = read_table(
+            table = _read_table(
                 root / track / f"{model}_history.csv",
                 ("epoch", "Train", "Validation"),
                 ("epoch", "Train", "Validation"),
@@ -109,7 +109,7 @@ def load_report_inputs(root):
             histories[track, model] = table
     image_predictions = {}
     for model in im.model.unique():
-        table = read_table(
+        table = _read_table(
             image / f"{model}_Test_predictions.csv",
             ("actual", "predicted"),
             ("actual", "predicted"),

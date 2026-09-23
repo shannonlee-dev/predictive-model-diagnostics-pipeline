@@ -43,8 +43,18 @@ src/diagnostics/
 ├── plotting.py          공통 학습 곡선
 ├── reproducibility.py   seed·결정적 실행 설정
 ├── prepare.py           데이터·가중치 준비
-├── timeseries.py        시계열 실험
-├── vision.py            이미지 실험
+├── timeseries/
+│   ├── __init__.py      기존 공개 함수·설정 import 경로
+│   ├── data.py          시계열 검증·분할·정규화·윈도우
+│   ├── evaluation.py    인과적 베이스라인·회귀 지표
+│   ├── training.py      순환 모델·학습
+│   └── pipeline.py      실험 실행·파일 저장
+├── vision/
+│   ├── __init__.py      기존 공개 함수·설정 import 경로
+│   ├── data.py          표본 분할·중복 검사·이미지 변환
+│   ├── training.py      ResNet 구성·학습·평가
+│   ├── artifacts.py     검수용 오류 이미지·CSV 저장
+│   └── pipeline.py      실험 실행·파일 저장
 ├── review.py            검수 집계·오류 갤러리
 └── report/
     ├── __init__.py      공개 진입점 run()

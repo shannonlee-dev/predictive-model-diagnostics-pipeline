@@ -11,10 +11,10 @@ from torchvision import datasets, models
 
 from .constants import (
     DEFAULT_SERIES_CSV,
-    MODEL_NAME,
-    PRETRAINED_WEIGHTS,
-    SERIES_NAME,
-    SERIES_SOURCE_URL,
+    EXCHANGE_RATE_SERIES_ID,
+    EXCHANGE_RATE_SOURCE_URL,
+    RESNET18_WEIGHTS_NAME,
+    VISION_MODEL_NAME,
 )
 from .io import sha256, write_json
 
@@ -34,7 +34,7 @@ def series_metadata(frame):
     }
 
 
-def retry(operation):
+def _retry(operation):
     for attempt in range(RETRY_ATTEMPTS):
         try:
             return operation()
@@ -52,9 +52,11 @@ def run(root):
     root.mkdir(parents=True, exist_ok=True)
     socket.setdefaulttimeout(REQUEST_TIMEOUT_SECONDS)
     torch.hub.set_dir(str(root / "weights"))
-    retry(lambda: datasets.CIFAR10(str(root), train=True, download=True))
-    retry(lambda: datasets.CIFAR10(str(root), train=False, download=True))
-    retry(lambda: models.resnet18(weights=models.ResNet18_Weights[PRETRAINED_WEIGHTS]))
+    _retry(lambda: datasets.CIFAR10(str(root), train=True, download=True))
+    _retry(lambda: datasets.CIFAR10(str(root), train=False, download=True))
+    _retry(
+        lambda: models.resnet18(weights=models.ResNet18_Weights[RESNET18_WEIGHTS_NAME])
+    )
     # Frozen official observations avoid changing upstream CSV endpoints.
     from .timeseries import load_series
 
@@ -67,12 +69,12 @@ def run(root):
     write_json(
         root / "provenance.json",
         {
-            "source": SERIES_SOURCE_URL,
-            "series": SERIES_NAME,
+            "source": EXCHANGE_RATE_SOURCE_URL,
+            "series": EXCHANGE_RATE_SERIES_ID,
             **metadata,
             "sha256": sha256(root / "exchange.csv"),
             "image_source": "torchvision.datasets.CIFAR10; official archive checksum verified by torchvision",
-            "model": MODEL_NAME,
-            "weights": PRETRAINED_WEIGHTS,
+            "model": VISION_MODEL_NAME,
+            "weights": RESNET18_WEIGHTS_NAME,
         },
     )
