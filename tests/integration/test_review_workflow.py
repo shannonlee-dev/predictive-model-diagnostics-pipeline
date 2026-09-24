@@ -44,10 +44,7 @@ def test_review_cli_succeeds_without_threshold(review_csv, count, monkeypatch, c
         reviewed=count,
         human_tag_counts={"occlusion": count} if count else {},
     )
-    html = (review_csv.parent / "error_gallery.html").read_text()
-    assert f"Human reviewed: {count}/31" in html
-    assert "suggestion:" not in html
-    assert "required" not in html
+    assert not (review_csv.parent / "error_gallery.html").exists()
     assert (review_csv.parent / "error_gallery.png").is_file()
 
 
@@ -96,9 +93,9 @@ def test_report_completion_depends_on_tracks(tmp_path, monkeypatch, count):
         "timeseries/improvements_percent.csv",
     ]:
         assert not (root / obsolete).exists()
-    assert 'src="errors/' in (root / "vision/error_gallery.html").read_text()
+    assert not (root / "vision/error_gallery.html").exists()
     assert not (root / "vision/errors.zip").exists()
-    assert "최소 30건" in (root / "diagnosis.md").read_text()
+    assert "오분류 분석표" in (root / "diagnosis.md").read_text()
     before = {
         p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
     }

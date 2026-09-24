@@ -1,6 +1,5 @@
-"""Summarize human review tags and render error galleries."""
+"""Summarize human review tags and render an error contact sheet."""
 
-import html
 from pathlib import Path
 
 import pandas as pd
@@ -45,20 +44,7 @@ def gallery(path):
     result = summarize_reviews(path)
     frame["human_tag"] = frame.human_tag.str.strip()
     write_json(path.parent / "review_status.json", result)
-    cards = []
-    for _, r in frame.sort_values(["human_tag", "sample_id"]).iterrows():
-        tag = r.human_tag or "UNREVIEWED"
-        cards.append(
-            f'<figure><img src="{html.escape(r.image, quote=True)}" width="160" height="160"><figcaption>{html.escape(r.sample_id)}<br>{html.escape(r.actual)} → {html.escape(r.predicted)} ({r.confidence:.3f})<br>{html.escape(tag)}</figcaption></figure>'
-        )
-    document = '<!doctype html><meta charset="utf-8"><title>Validation error review</title><style>body{font:16px sans-serif;max-width:1200px;margin:40px auto}main{display:flex;flex-wrap:wrap}figure{width:240px;margin:10px}img{image-rendering:pixelated}figcaption{overflow-wrap:anywhere}</style>'
-    document += (
-        f"<h1>Validation error review</h1><p>Human reviewed: {result['reviewed']}/{result['total_errors']}.</p><main>"
-        + "".join(cards)
-        + "</main>"
-    )
-    (path.parent / "error_gallery.html").write_text(document)
-    # A static contact sheet also renders directly inside the Markdown report.
+    # A static contact sheet renders directly inside the Markdown report.
     samples = frame.sort_values(["human_tag", "sample_id"]).head(30)
     fig, axes = plt.subplots(5, 6, figsize=(15, 13))
     for ax in axes.flat:

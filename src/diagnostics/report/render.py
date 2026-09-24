@@ -112,3 +112,45 @@ def render_baseline_plot(metrics, output):
     fig.tight_layout()
     fig.savefig(output, dpi=150)
     plt.close(fig)
+
+
+def render_final_performance_plot(metrics, output, track):
+    """Rank all models on the Test metric used to compare a track."""
+    from ..plotting import plt
+
+    if track == "vision":
+        ranked = metrics.loc[metrics.split == "Test", ["model", "accuracy"]].copy()
+        ranked["score"] = ranked.accuracy * 100
+        ranked = ranked.sort_values("score", ascending=False)
+        title = "Vision models — Test accuracy"
+        xlabel = "Accuracy (%) · higher is better"
+        value_format = "{:.2f}%"
+    elif track == "timeseries":
+        ranked = metrics.loc[:, ["model", "MAE"]].copy()
+        ranked["score"] = ranked.MAE
+        ranked = ranked.sort_values("score", ascending=True)
+        title = "Time-series models — Test MAE"
+        xlabel = "MAE (KRW/USD) · lower is better"
+        value_format = "{:.2f}"
+    else:
+        raise ValueError(f"Unknown experiment track: {track}")
+
+    fig, ax = plt.subplots(figsize=(9, max(4, len(ranked) * 0.52 + 1.5)))
+    colors = ["#24966b"] + ["#6687ae"] * max(0, len(ranked) - 2) + ["#c76a66"]
+    bars = ax.barh(ranked.model, ranked.score, color=colors[: len(ranked)])
+    ax.invert_yaxis()
+    ax.set(xlabel=xlabel, title=title, xlim=(0, ranked.score.max() * 1.25))
+    ax.grid(axis="x", alpha=0.2)
+    ax.set_axisbelow(True)
+    for position, (bar, score) in enumerate(zip(bars, ranked.score)):
+        rank = "  BEST" if position == 0 else "  WORST" if position == len(ranked) - 1 else ""
+        ax.text(
+            bar.get_width() + ranked.score.max() * 0.015,
+            bar.get_y() + bar.get_height() / 2,
+            value_format.format(score) + rank,
+            va="center",
+            fontsize=9,
+        )
+    fig.tight_layout()
+    fig.savefig(output, dpi=150)
+    plt.close(fig)

@@ -13,6 +13,7 @@ from .inputs import load_report_inputs
 from .render import (
     build_report_context,
     render_baseline_plot,
+    render_final_performance_plot,
     render_prediction_plot,
     render_template,
 )
@@ -46,6 +47,12 @@ def run(root):
     gallery(image / "error_review.csv")
     render_prediction_plot(data.predictions, series / "predictions.png")
     render_baseline_plot(data.series_metrics, series / "baseline_comparison.png")
+    render_final_performance_plot(
+        data.image_metrics, image / "final_performance.png", "vision"
+    )
+    render_final_performance_plot(
+        data.series_metrics, series / "final_performance.png", "timeseries"
+    )
     (root / "diagnosis.md").write_text(diagnosis_document, encoding="utf-8")
     (root / "baseline_comparison.md").write_text(comparison_document, encoding="utf-8")
     return root

@@ -38,7 +38,7 @@ Test 승리는 0회였으며 2회 동률·8회 패배했다. 평균 MAE는 Naive
 
 사람의 오분류 사례 검토는 권장되는 선택적 오류 분석 절차다. 검토한 고유 이미지에 관찰한 원인의 human_tag를 작성할 수 있다. 태그는 dark_lighting, blur, low_resolution, background_clutter, occlusion, class_similarity, suspected_label_error, high_confidence_error, model_limitation 중 하나다. 과도한 해석 없이 불확실성을 기록한다. 검수 명령은 태그 형식만 확인하지만 실제로 사람이 봤는지 인증할 수는 없다.
 
-수정 후 diagnostics review --csv <경로>로 HTML/PNG 갤러리와 집계를 갱신하고 report 명령으로 보고서에 반영할 수 있다. 허용된 human_tag가 작성된 사례만 검수 건수로 집계한다. 검수 통계는 분석 보조 정보이며 최소 건수나 완료 임계값은 없다. 검수가 0건이어도 정상 종료하며 중복 sample_id나 잘못된 human_tag 등 데이터 오류는 실패한다. 보고서는 두 실험 트랙의 audit.json과 필수 지표·학습 이력·Test 예측 산출물을 검증한 뒤 생성하며, 사람 검수 건수는 완료 조건이 아니다.
+수정 후 diagnostics review --csv <경로>로 PNG 요약 그림과 집계를 갱신하고 report 명령으로 보고서에 반영할 수 있다. 허용된 human_tag가 작성된 사례만 검수 건수로 집계한다. 검수 통계는 분석 보조 정보이며 최소 건수나 완료 임계값은 없다. 검수가 0건이어도 정상 종료하며 중복 sample_id나 잘못된 human_tag 등 데이터 오류는 실패한다. 보고서는 두 실험 트랙의 audit.json과 필수 지표·학습 이력·Test 예측 산출물을 검증한 뒤 생성하며, 사람 검수 건수는 완료 조건이 아니다.
 
 ## 실패 대응 및 재현
 
@@ -47,7 +47,7 @@ Test 승리는 0회였으며 2회 동률·8회 패배했다. 평균 MAE는 Naive
 - 실험 출력 디렉터리는 이미 존재하면 중단한다. 원본·기존 결과·사람 태깅을 덮어쓰지 않는다. 실패 출력은 남겨 진단하고 새 경로에서 재시도한다. audit.json은 전체 track 성공 후에만 생성한다.
 - 두 audit.json이 없는 불완전 결과로 종합 리포트를 생성하지 않는다. GPU가 없어도 CPU 실행이 가능하다. 기본 실험 명령은 자동 탐색을 수행하지 않으며, 별도 탐색 스크립트의 완료 결과는 위에 기록했다.
 - seed, 입력 hash, split membership, 패키지 잠금 파일, epoch history를 보존한다. checkpoint는 기본적으로 저장하지 않으며(`save_checkpoints=False`), CLI에서 `--save-checkpoints`를 지정할 때만 `.pt` 파일로 저장한다. 다른 플랫폼·패키지·thread 설정 사이 bitwise 재현성은 보장하지 않는다.
-- 기준 실험은 단일 seed의 교육용 비교이며 추가 탐색의 반복 seed 결과는 별도로 기록한다. 금융 투자 판단이나 통계적 유의성 주장을 하지 않는다. 실측 열세를 숨기지 않는다.
+- 기준 실험은 단일 seed 비교이며 추가 탐색의 반복 seed 결과는 별도로 기록한다. 금융 투자 판단이나 통계적 유의성을 입증하지 않으며, 실측 열세도 그대로 기록한다.
 
 ## 모듈 입출력
 
@@ -56,6 +56,6 @@ Test 승리는 0회였으며 2회 동률·8회 패배했다. 평균 MAE는 Naive
 | prepare | 공개 데이터 → 검증된 로컬 데이터·출처 manifest |
 | vision | CIFAR cache·seed·표본 수 → 모델·분할표·지표·실제 오분류 |
 | timeseries | 단일 CSV·window → baseline/RNN/LSTM·지표·날짜별 예측 |
-| review | 사람이 수정한 CSV → 검수 통계·태그별 HTML/PNG 갤러리 |
+| review | 사람이 수정한 CSV → 검수 통계·PNG 요약 그림 |
 | report | 성공한 두 실험 디렉터리 → Markdown·비교 그래프·오류 갤러리 |
 | common | seed·표·학습 이력 → 재현 설정·JSON·loss 그래프 |

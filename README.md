@@ -4,7 +4,7 @@
 
 Few-shot 이미지 분류와 일별 환율 예측에서 **어떤 모델이 더 잘 작동하고, 어디서 실패하는지** 비교하는 PyTorch 실험 프로젝트다. 전이학습 전략과 시계열 베이스라인을 같은 평가 구간에서 비교하고, 학습 곡선·오분류 사례·실측 지표로 결과를 해석한다.
 
-저장된 결과부터 보려면 [진단 리포트](reports/reference/diagnosis.md)와 [베이스라인 비교](reports/reference/baseline_comparison.md)를 확인한다. 새 실험은 아래 설치·실행 절차로 재현할 수 있다.
+저장된 결과부터 보려면 [이미지 모델 최종 성능](reports/reference/vision/final_performance.png)과 [시계열 모델 최종 성능](reports/reference/timeseries/final_performance.png)을 확인한다. 자세한 결과는 [진단 리포트](reports/reference/diagnosis.md)와 [베이스라인 비교](reports/reference/baseline_comparison.md)에 있다. 새 실험은 아래 설치·실행 절차로 재현할 수 있다.
 
 ## 핵심 특징
 
@@ -154,7 +154,7 @@ diagnostics timeseries --csv /path/to/series.csv --output reports/custom-run/tim
 
 ### 사람 검수
 
-생성된 `vision/error_gallery.html`을 로컬 브라우저로 열고, `vision/error_review.csv`의 `human_tag`에 관찰한 오류 원인을 기록한다. 허용 태그는 [실험 정책](docs/protocol.md)을 따른다.
+`vision/errors/`의 원본 이미지를 확인하고, `vision/error_review.csv`의 `human_tag`에 관찰한 오류 원인을 기록한다. `vision/error_gallery.png`에는 대표 사례 최대 30건이 표시된다. 허용 태그는 [실험 정책](docs/protocol.md)을 따른다.
 
 ```bash
 diagnostics review --csv reports/my-run/vision/error_review.csv
@@ -175,7 +175,7 @@ diagnostics report --run reports/my-run
 | `reports/<run>/baseline_comparison.md` | 베이스라인별 성능과 개선률 |
 | `reports/<run>/vision/review_status.json` | 사람 검수 건수와 실패 원인별 통계 |
 
-기본 출력은 리포트·필수 시각화와 재생성/검증에 필요한 원자료만 저장한다. 손실 진단·개선률·클래스별 혼동 통계는 Markdown에 포함하고 별도 CSV로 중복 저장하지 않는다. Train/Validation 개별 예측은 저장하지 않으며 해당 성능은 `metrics.csv`에 남긴다. 오류 원본은 `vision/errors/`에 개별 PNG로 저장하며 HTML 갤러리에서 확인할 수 있다.
+기본 출력은 리포트·필수 시각화와 재생성/검증에 필요한 원자료만 저장한다. 손실 진단·개선률·클래스별 혼동 통계는 Markdown에 포함하고 별도 CSV로 중복 저장하지 않는다. Train/Validation 개별 예측은 저장하지 않으며 해당 성능은 `metrics.csv`에 남긴다. 오류 원본은 `vision/errors/`에 개별 PNG로 저장한다.
 
 학습 checkpoint(`.pt`)는 기본적으로 저장하지 않는다. 가중치가 필요하면 `vision` 또는 `timeseries` 명령에 `--save-checkpoints`를 추가한다. Git에는 포함하지 않는다. 데이터·모델 출처는 [sources.md](docs/sources.md), 환율 수집 기록은 [provenance.json](datasets/provenance.json)을 확인한다.
 

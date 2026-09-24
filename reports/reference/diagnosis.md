@@ -4,8 +4,6 @@
 
 Seed 42, 이미지 클래스 cat, deer, dog. 클래스당 Train 40장, Validation 150장, Test 250장. 입력 시계열은 1249개 관측이다.
 
-사람 검수: **94/94건**. CLI는 미검수 상태에서도 리포트를 생성하지만, 미션 제출에는 실제 오분류 최소 30건을 사람이 확인하고 실패 원인을 태깅해야 한다.
-
 ## 이미지 실측 비교
 
 | model | split | loss | accuracy |
@@ -121,7 +119,7 @@ CNN은 공간상의 국소 패턴을 학습하고, RNN은 순서대로 hidden st
 
 ![실제 Validation 오분류 사례](vision/error_gallery.png)
 
-[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 Validation 오분류를 포함한다. 실제 관찰에 따른 human_tag만 사람 검수 통계에 포함한다.
+[오분류 분석표](vision/error_review.csv)는 Validation 오분류를 포함한다. 실제 관찰에 따른 human_tag만 사람 검수 통계에 포함한다.
 
 사람이 확인한 실패 원인 통계:
 
@@ -131,7 +129,7 @@ CNN은 공간상의 국소 패턴을 학습하고, RNN은 순서대로 hidden st
 | class_similarity | 40 |
 | dark_lighting | 7 |
 
-원본 오류 이미지는 `vision/errors/`에 보관하며 HTML 갤러리에서 모두 확인할 수 있다.
+원본 오류 이미지는 `vision/errors/`에 보관하며, 위 PNG에는 최대 30건을 표시한다.
 
 ## 재현 및 누수 근거
 
