@@ -53,7 +53,6 @@ def run(root):
     socket.setdefaulttimeout(REQUEST_TIMEOUT_SECONDS)
     torch.hub.set_dir(str(root / "weights"))
 
-
     _retry(lambda: datasets.CIFAR10(str(root), train=True, download=True))
     _retry(lambda: datasets.CIFAR10(str(root), train=False, download=True))
     _retry(
