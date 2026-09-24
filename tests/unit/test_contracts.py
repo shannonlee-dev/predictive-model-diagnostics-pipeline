@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from diagnostics.constants import DEFAULT_SEED
-from diagnostics.prepare import series_metadata
+from diagnostics.prepare import _series_metadata
 from diagnostics.review import summarize_reviews
 from diagnostics.timeseries import (
     baseline_predictions,
@@ -257,7 +257,7 @@ def test_series_metadata_is_derived_from_observed_dates():
             "value": [1.0, 2.0, 3.0, 4.0],
         }
     )
-    assert series_metadata(data) == {
+    assert _series_metadata(data) == {
         "start": "2020-01-01",
         "end": "2020-01-08",
         "observations": 4,

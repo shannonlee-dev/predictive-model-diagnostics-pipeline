@@ -23,7 +23,7 @@ REQUEST_TIMEOUT_SECONDS = 60
 RETRY_BACKOFF_BASE = 2
 
 
-def series_metadata(frame):
+def _series_metadata(frame):
     """Return provenance facts calculated from the validated observations."""
     expected = pd.bdate_range(frame.date.iloc[0], frame.date.iloc[-1])
     return {
@@ -52,17 +52,19 @@ def run(root):
     root.mkdir(parents=True, exist_ok=True)
     socket.setdefaulttimeout(REQUEST_TIMEOUT_SECONDS)
     torch.hub.set_dir(str(root / "weights"))
+
+
     _retry(lambda: datasets.CIFAR10(str(root), train=True, download=True))
     _retry(lambda: datasets.CIFAR10(str(root), train=False, download=True))
     _retry(
         lambda: models.resnet18(weights=models.ResNet18_Weights[RESNET18_WEIGHTS_NAME])
     )
-    # Frozen official observations avoid changing upstream CSV endpoints.
+
     from .timeseries import load_series
 
     snapshot = DEFAULT_SERIES_CSV
     frame = load_series(snapshot)
-    metadata = series_metadata(frame)
+    metadata = _series_metadata(frame)
     temporary = root / "exchange.csv.part"
     shutil.copyfile(snapshot, temporary)
     temporary.replace(root / "exchange.csv")
