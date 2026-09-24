@@ -16,7 +16,7 @@ from ..plotting import loss_plot
 from ..reproducibility import seed_everything
 from .data import load_series, prepare_series
 from .evaluation import baseline_predictions, metrics
-from .training import _predict, build_model, fit
+from .training import build_model, fit, predict
 
 DEFAULT_EPOCHS = TIMESERIES_DEFAULT_EPOCHS
 DEFAULT_WINDOW = TIMESERIES_DEFAULT_WINDOW
@@ -48,7 +48,7 @@ def train_model(prepared, kind, epochs, seed, residual=False):
     model = build_model(kind, residual=residual)
     history = fit(model, residual, train_loader, evaluation, epochs)
     prediction = (
-        _predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
+        predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
     )
     return model, history, prediction
 
@@ -86,7 +86,7 @@ def run(csv, output, epochs=DEFAULT_EPOCHS, seed=DEFAULT_SEED, window=DEFAULT_WI
         model = build_model(kind, residual=residual)
         history = fit(model, residual, train_loader, evaluation, epochs)
         prediction = (
-            _predict(model, X[indices["Test"]]) * prepared["std"]
+            predict(model, X[indices["Test"]]) * prepared["std"]
             + prepared["mean"]
         )
         history.to_csv(output / f"{name}_history.csv", index=False)

@@ -1,30 +1,6 @@
-"""Public experiment API; implementation is split by responsibility."""
+"""Public vision experiment API."""
 
-from .artifacts import HIGH_CONFIDENCE_THRESHOLD as HIGH_CONFIDENCE_THRESHOLD
-from .artifacts import LOW_BRIGHTNESS_THRESHOLD as LOW_BRIGHTNESS_THRESHOLD
-from .data import AUGMENT_BRIGHTNESS as AUGMENT_BRIGHTNESS
-from .data import AUGMENT_CONTRAST as AUGMENT_CONTRAST
-from .data import AUGMENT_CROP_PADDING as AUGMENT_CROP_PADDING
-from .data import AUGMENT_FLIP_PROBABILITY as AUGMENT_FLIP_PROBABILITY
-from .data import IMAGE_INPUT_SIZE as IMAGE_INPUT_SIZE
-from .data import IMAGENET_MEAN as IMAGENET_MEAN
-from .data import IMAGENET_STD as IMAGENET_STD
-from .data import MAX_SHOTS_PER_CLASS as MAX_SHOTS_PER_CLASS
-from .data import SELECTED_CIFAR10_CLASS_IDS as SELECTED_CIFAR10_CLASS_IDS
-from .data import SELECTED_CIFAR10_CLASS_NAMES as SELECTED_CIFAR10_CLASS_NAMES
-from .data import Images as Images
 from .data import split_indices as split_indices
-from .pipeline import DEFAULT_EPOCHS as DEFAULT_EPOCHS
-from .pipeline import DEFAULT_SEED as DEFAULT_SEED
-from .pipeline import DEFAULT_SHOTS_PER_CLASS as DEFAULT_SHOTS_PER_CLASS
-from .pipeline import DEFAULT_TEST_PER_CLASS as DEFAULT_TEST_PER_CLASS
-from .pipeline import DEFAULT_VALIDATION_PER_CLASS as DEFAULT_VALIDATION_PER_CLASS
-from .pipeline import EVALUATION_BATCH_SIZE as EVALUATION_BATCH_SIZE
-from .pipeline import TRAIN_BATCH_SIZE as TRAIN_BATCH_SIZE
 from .pipeline import run as run
-from .training import AUGMENTED_WEIGHT_DECAY as AUGMENTED_WEIGHT_DECAY
-from .training import EARLY_STOPPING_PATIENCE as EARLY_STOPPING_PATIENCE
-from .training import FULL_MODEL_LEARNING_RATE as FULL_MODEL_LEARNING_RATE
-from .training import LINEAR_PROBE_LEARNING_RATE as LINEAR_PROBE_LEARNING_RATE
 from .training import build_model as build_model
 from .training import fit as fit

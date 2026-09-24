@@ -191,7 +191,7 @@ def test_timeseries_fit_restores_best_validation_state():
 
     from diagnostics.timeseries import build_model as build_timeseries_model
     from diagnostics.timeseries import fit as fit_timeseries
-    from diagnostics.timeseries.training import _evaluate, _predict
+    from diagnostics.timeseries.training import _evaluate, predict
 
     torch.manual_seed(42)
     inputs = torch.randn(8, 10, 1)
@@ -208,7 +208,7 @@ def test_timeseries_fit_restores_best_validation_state():
     assert list(history) == ["epoch", "Train", "Validation"]
     assert len(history) == 2
     assert _evaluate(model, inputs, target) == pytest.approx(history.Validation.min())
-    assert np.isfinite(_predict(model, inputs)).all()
+    assert np.isfinite(predict(model, inputs)).all()
 
 
 def test_short_training_produces_finite_test_predictions():
@@ -268,6 +268,6 @@ def test_series_metadata_is_derived_from_observed_dates():
 
 def test_default_seed_is_shared_by_cli_and_experiments():
     from diagnostics.cli import DEFAULT_SEED as cli_seed
-    from diagnostics.timeseries import DEFAULT_SEED as timeseries_seed
+    from diagnostics.timeseries.pipeline import DEFAULT_SEED as timeseries_seed
 
     assert cli_seed == timeseries_seed == DEFAULT_SEED == 42

@@ -40,7 +40,7 @@ def _evaluate(model, inputs, target):
 
 
 @torch.no_grad()
-def _predict(model, inputs):
+def predict(model, inputs):
     model.eval()
     return model(inputs).numpy()
 

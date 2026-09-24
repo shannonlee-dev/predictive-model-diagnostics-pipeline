@@ -29,7 +29,7 @@ def build_model(strategy, pretrained=True):
 
 
 @torch.no_grad()
-def _evaluate(model, loader):
+def evaluate(model, loader):
     model.eval()
     probabilities, labels, loss = [], [], 0.0
     for x, y in loader:
@@ -70,7 +70,7 @@ def fit(model, strategy, train_loader, evaluation, epochs):
             loss.backward()
             optimizer.step()
         measurements = {
-            split: _evaluate(model, loader)[0] for split, loader in evaluation.items()
+            split: evaluate(model, loader)[0] for split, loader in evaluation.items()
         }
         history.append(
             {"epoch": epoch, **{k: v["loss"] for k, v in measurements.items()}}

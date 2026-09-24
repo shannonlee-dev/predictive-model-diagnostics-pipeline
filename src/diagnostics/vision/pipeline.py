@@ -19,7 +19,7 @@ from ..constants import (
 from ..io import sha256, write_json
 from ..plotting import loss_plot
 from ..reproducibility import seed_everything
-from .artifacts import _export_errors
+from .artifacts import export_errors
 from .data import (
     IMAGE_INPUT_SIZE,
     IMAGENET_MEAN,
@@ -28,7 +28,7 @@ from .data import (
     Images,
     prepare_data,
 )
-from .training import _evaluate, build_model, fit
+from .training import build_model, evaluate, fit
 
 TRAIN_BATCH_SIZE = 24
 EVALUATION_BATCH_SIZE = 32
@@ -50,23 +50,27 @@ def run(
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     seed_everything(seed)
-    train_source, test_source, indices, test_indices, membership = prepare_data(
+    prepared = prepare_data(
         data, shots, validation, test_per_class, seed
     )
-    membership.to_csv(output / "membership.csv", index=False)
+    prepared.membership.to_csv(output / "membership.csv", index=False)
     evaluation = {
-        s: DataLoader(Images(train_source, ids), batch_size=EVALUATION_BATCH_SIZE)
-        for s, ids in indices.items()
+        s: DataLoader(Images(prepared.train_source, ids), batch_size=EVALUATION_BATCH_SIZE)
+        for s, ids in prepared.indices.items()
     }
     test_loader = DataLoader(
-        Images(test_source, test_indices), batch_size=EVALUATION_BATCH_SIZE
+        Images(prepared.test_source, prepared.test_indices), batch_size=EVALUATION_BATCH_SIZE
     )
     rows = []
     for strategy in VISION_STRATEGIES:
         seed_everything(seed)
         model = build_model(strategy, pretrained=strategy != "scratch")
         train_loader = DataLoader(
-            Images(train_source, indices["Train"], strategy == "augmented"),
+            Images(
+                prepared.train_source,
+                prepared.indices["Train"],
+                strategy == "augmented",
+            ),
             batch_size=TRAIN_BATCH_SIZE,
             shuffle=True,
         )
@@ -77,17 +81,25 @@ def run(
         )
         torch.save(model.state_dict(), output / f"{strategy}.pt")
         for split, loader in {**evaluation, "Test": test_loader}.items():
-            metric, probability, labels = _evaluate(model, loader)
+            metric, probability, labels = evaluate(model, loader)
             rows.append({"model": strategy, "split": split, **metric})
             if strategy == "fine_tune" and split == "Validation":
-                _export_errors(
-                    train_source, indices["Validation"], probability, labels, output
+                export_errors(
+                    prepared.train_source,
+                    prepared.indices["Validation"],
+                    probability,
+                    labels,
+                    output,
                 )
             prediction_frame = pd.DataFrame(
                 {
                     "sample_id": [
                         f"cifar10_{'test' if split == 'Test' else 'train'}_{i}"
-                        for i in (test_indices if split == "Test" else indices[split])
+                        for i in (
+                            prepared.test_indices
+                            if split == "Test"
+                            else prepared.indices[split]
+                        )
                     ],
                     "actual": labels,
                     "predicted": probability.argmax(1),

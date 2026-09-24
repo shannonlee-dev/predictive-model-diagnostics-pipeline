@@ -9,7 +9,7 @@ LOW_BRIGHTNESS_THRESHOLD = 0.25
 HIGH_CONFIDENCE_THRESHOLD = 0.8
 
 
-def _export_errors(source, indices, probability, labels, output):
+def export_errors(source, indices, probability, labels, output):
     rows = []
     (output / "errors").mkdir()
     # Validation only: error inspection cannot leak Test into improvement decisions.

@@ -1,6 +1,7 @@
 """Few-shot membership, duplicate checks, and image transforms."""
 
 import hashlib
+from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
@@ -74,6 +75,15 @@ class Images(Dataset):
         return self.transform(image), SELECTED_CIFAR10_CLASS_IDS.index(label)
 
 
+@dataclass
+class PreparedVisionData:
+    train_source: Dataset
+    test_source: Dataset
+    indices: dict[str, list[int]]
+    test_indices: list[int]
+    membership: pd.DataFrame
+
+
 def prepare_data(data, shots, validation, test_per_class, seed):
     """Select disjoint samples and audit exact duplicates before training."""
     train_source = datasets.CIFAR10(str(data), train=True, download=False)
@@ -120,4 +130,10 @@ def prepare_data(data, shots, validation, test_per_class, seed):
             raise ValueError("Identical image content crosses split boundaries")
         fingerprints[digest] = row["split"]
         row["sha256"] = digest
-    return train_source, test_source, indices, test_indices, pd.DataFrame(membership)
+    return PreparedVisionData(
+        train_source=train_source,
+        test_source=test_source,
+        indices=indices,
+        test_indices=test_indices,
+        membership=pd.DataFrame(membership),
+    )
