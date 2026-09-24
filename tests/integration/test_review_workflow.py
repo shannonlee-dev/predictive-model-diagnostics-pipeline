@@ -81,11 +81,13 @@ def test_report_completion_depends_on_tracks(tmp_path, monkeypatch, count):
     frame["human_tag"] = ""
     frame.loc[frame.index < count, "human_tag"] = "occlusion"
     frame.to_csv(path, index=False)
+    (root / "baseline_comparison.md").write_text("obsolete generated report")
     monkeypatch.setattr("sys.argv", ["diagnostics", "report", "--run", str(root)])
     main()
     status = json.loads((root / "vision/review_status.json").read_text())
     assert status["reviewed"] == count
     for obsolete in [
+        "baseline_comparison.md",
         "status.json",
         "loss_diagnosis.csv",
         "vision/confusion_counts.csv",
@@ -95,7 +97,14 @@ def test_report_completion_depends_on_tracks(tmp_path, monkeypatch, count):
         assert not (root / obsolete).exists()
     assert not (root / "vision/error_gallery.html").exists()
     assert not (root / "vision/errors.zip").exists()
-    assert "오분류 분석표" in (root / "diagnosis.md").read_text()
+    document = (root / "diagnosis.md").read_text()
+    assert "오분류 분석표" in document
+    assert "### 베이스라인별 개선률" in document
+    assert "| LSTM_residual | Naive | -0.3573 | -0.1468 | -0.3416 |" in document
+    assert document.count("| model | MAE | RMSE | MAPE | MAPE_excluded |") == 1
+    assert document.count("(timeseries/baseline_comparison.png)") == 1
+    assert "baseline_comparison.md" not in document
+    assert "(#베이스라인별-개선률)" in document
     before = {
         p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
     }
@@ -158,3 +167,27 @@ def test_report_uses_run_metadata(tmp_path):
     assert "a, b, c" in document
     assert "12개 관측값" in document
     assert "{{" not in document
+
+
+@pytest.mark.parametrize("metric,value", [("MAE", 0.0), ("MAPE", float("nan"))])
+def test_unified_report_preserves_undefined_improvements(tmp_path, metric, value):
+    from diagnostics.report import run
+
+    root = tmp_path / "run"
+    reference = Path(__file__).resolve().parents[2] / "reports/reference"
+    shutil.copytree(reference, root, ignore=shutil.ignore_patterns("*.pt"))
+    path = root / "timeseries/metrics.csv"
+    metrics = pd.read_csv(path)
+    metrics.loc[metrics.model == "Naive", metric] = value
+    metrics.to_csv(path, index=False)
+
+    run(root)
+
+    document = (root / "diagnosis.md").read_text()
+    columns = {"MAE": 3, "MAPE": 5}
+    comparisons = [
+        line for line in document.splitlines() if line.startswith("| RNN | Naive |")
+    ]
+    assert len(comparisons) == 1
+    assert comparisons[0].split("|")[columns[metric]].strip() == "N/A"
+    assert not (root / "baseline_comparison.md").exists()

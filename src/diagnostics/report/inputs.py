@@ -73,6 +73,8 @@ def load_report_inputs(root):
         ("MAE", "RMSE"),
         ("model",),
     )
+    if set(im.model) != set(VISION_STRATEGIES):
+        raise ValueError("Vision metrics must contain the four ResNet18 strategies")
     for model in VISION_STRATEGIES:
         if not {"Train", "Validation", "Test"} <= set(
             im.loc[im.model == model, "split"]

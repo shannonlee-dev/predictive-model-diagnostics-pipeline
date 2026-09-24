@@ -38,10 +38,12 @@ def summarize_reviews(path):
     }
 
 
-def gallery(path):
+def gallery(path, model=None):
     path = Path(path)
     frame = pd.read_csv(path).fillna("")
     result = summarize_reviews(path)
+    if "model" in frame and not frame.empty:
+        model = frame.model.iloc[0]
     frame["human_tag"] = frame.human_tag.str.strip()
     write_json(path.parent / "review_status.json", result)
     # A static contact sheet renders directly inside the Markdown report.
@@ -57,9 +59,10 @@ def gallery(path):
             f"{row.sample_id.rsplit('_', 1)[-1]}: {row.actual} → {row.predicted}\n{tag}",
             fontsize=9,
         )
+    prefix = f"{model} — " if model else ""
     fig.suptitle(
-        f"Validation errors: {len(samples)} examples; "
-        f"Human reviewed: {result['reviewed']}/{result['total_errors']}"
+        f"{prefix}Validation errors: {len(samples)} examples; "
+        f"Tagged: {result['reviewed']}/{result['total_errors']}"
     )
     fig.tight_layout()
     fig.savefig(path.parent / "error_gallery.png", dpi=120)

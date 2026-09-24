@@ -6,11 +6,12 @@ import pandas as pd
 from .data import SELECTED_CIFAR10_CLASS_NAMES
 
 
-def export_errors(source, indices, probability, labels, output):
+def export_errors(source, indices, probability, labels, output, model):
     rows = []
     (output / "errors").mkdir()
-    # Validation only: error inspection cannot leak Test into improvement decisions.
-    for position in np.flatnonzero(probability.argmax(1) != labels):
+    # Export Validation images; the displayed model is chosen after Test evaluation.
+    error_positions = np.flatnonzero(probability.argmax(1) != labels)
+    for position in sorted(error_positions, key=lambda position: indices[position]):
         original = indices[position]
         image, _ = source[original]
         sample_id = f"cifar10_train_{original}"
@@ -20,6 +21,7 @@ def export_errors(source, indices, probability, labels, output):
         rows.append(
             {
                 "sample_id": sample_id,
+                "model": model,
                 "split": "Validation",
                 "image": relative,
                 "actual": SELECTED_CIFAR10_CLASS_NAMES[labels[position]],
@@ -33,6 +35,7 @@ def export_errors(source, indices, probability, labels, output):
         )
     columns = [
         "sample_id",
+        "model",
         "split",
         "image",
         "actual",

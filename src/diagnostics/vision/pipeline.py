@@ -18,7 +18,9 @@ from ..constants import (
 )
 from ..io import sha256, write_json
 from ..plotting import loss_plot
+from ..report.render import render_final_performance_plot
 from ..reproducibility import seed_everything
+from ..review import gallery
 from .artifacts import export_errors
 from .data import (
     IMAGE_INPUT_SIZE,
@@ -63,7 +65,7 @@ def run(
         Images(prepared.test_source, prepared.test_indices),
         batch_size=EVALUATION_BATCH_SIZE,
     )
-    rows = []
+    rows, validation_predictions = [], {}
     for strategy in VISION_STRATEGIES:
         seed_everything(seed)
         model = build_model(strategy, pretrained=strategy != "scratch")
@@ -86,14 +88,8 @@ def run(
         for split, loader in {**evaluation, "Test": test_loader}.items():
             metric, probability, labels = evaluate(model, loader)
             rows.append({"model": strategy, "split": split, **metric})
-            if strategy == "fine_tune" and split == "Validation":
-                export_errors(
-                    prepared.train_source,
-                    prepared.indices["Validation"],
-                    probability,
-                    labels,
-                    output,
-                )
+            if split == "Validation":
+                validation_predictions[strategy] = (probability, labels)
             if split != "Test":
                 continue
             prediction_frame = pd.DataFrame(
@@ -115,11 +111,34 @@ def run(
                 output / f"{strategy}_{split}_predictions.csv", index=False
             )
         pd.DataFrame(rows).to_csv(output / "metrics.csv", index=False)
+    metrics = pd.DataFrame(rows)
+    # Post-hoc inspection follows the displayed Test ranking, not checkpoint selection.
+    winner = (
+        metrics.loc[metrics.split == "Test"]
+        .sort_values("accuracy", ascending=False, kind="stable")
+        .iloc[0]
+        .model
+    )
+    probability, labels = validation_predictions[winner]
+    export_errors(
+        prepared.train_source,
+        prepared.indices["Validation"],
+        probability,
+        labels,
+        output,
+        model=winner,
+    )
+    gallery(output / "error_review.csv", model=winner)
+    render_final_performance_plot(metrics, output / "final_performance.png", "vision")
     write_json(
         output / "audit.json",
         {
             "seed": seed,
             "epochs": epochs,
+            "strategies": list(VISION_STRATEGIES),
+            "error_review_model": winner,
+            "error_review_selection": "Test accuracy descending; ties keep experiment order",
+            "error_review_split": "Validation",
             "classes": SELECTED_CIFAR10_CLASS_NAMES,
             "shots": shots,
             "validation_per_class": validation,

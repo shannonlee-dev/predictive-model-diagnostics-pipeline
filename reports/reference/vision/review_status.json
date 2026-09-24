@@ -1,9 +1,11 @@
 {
-  "total_errors": 94,
-  "reviewed": 94,
+  "total_errors": 98,
+  "reviewed": 98,
   "human_tag_counts": {
-    "high_confidence_error": 47,
-    "class_similarity": 40,
-    "dark_lighting": 7
+    "low_resolution": 60,
+    "model_limitation": 15,
+    "background_clutter": 13,
+    "class_similarity": 7,
+    "occlusion": 3
   }
 }

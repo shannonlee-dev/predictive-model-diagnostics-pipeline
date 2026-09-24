@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-from ..io import markdown_table
 from ..review import gallery
 from .analysis import (
     build_baseline_comparison,
@@ -34,17 +33,13 @@ def run(root):
         data.series_audit["mean"],
     )
     diagnosis_document = render_template(
-        TEMPLATE_DIR / "diagnosis.md", build_report_context(data, diagnosis, summary)
-    )
-    comparison_document = render_template(
-        TEMPLATE_DIR / "baseline_comparison.md",
-        {
-            "metrics_table": markdown_table(data.series_metrics),
-            "comparison_table": markdown_table(comparison.fillna("N/A")),
-        },
+        TEMPLATE_DIR / "diagnosis.md",
+        build_report_context(data, diagnosis, summary, comparison),
     )
     # All report inputs and templates have been checked before output generation.
-    gallery(image / "error_review.csv")
+    gallery(
+        image / "error_review.csv", model=data.image_audit.get("error_review_model")
+    )
     render_prediction_plot(data.predictions, series / "predictions.png")
     render_baseline_plot(data.series_metrics, series / "baseline_comparison.png")
     render_final_performance_plot(
@@ -54,5 +49,6 @@ def run(root):
         data.series_metrics, series / "final_performance.png", "timeseries"
     )
     (root / "diagnosis.md").write_text(diagnosis_document, encoding="utf-8")
-    (root / "baseline_comparison.md").write_text(comparison_document, encoding="utf-8")
+    # Retire the former generated report only after the unified report is written.
+    (root / "baseline_comparison.md").unlink(missing_ok=True)
     return root

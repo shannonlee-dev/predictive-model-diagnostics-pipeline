@@ -28,7 +28,7 @@ def _format_percent(value):
     return "N/A" if value != value else f"{value:.2f}"
 
 
-def build_report_context(data, diagnosis, summary):
+def build_report_context(data, diagnosis, summary, comparison):
     image_audit = data.image_audit
     series_audit = data.series_audit
     image_metrics = data.image_metrics
@@ -56,8 +56,9 @@ def build_report_context(data, diagnosis, summary):
         "ratio_threshold": HIGH_VARIANCE_RATIO,
         "image_metrics_table": markdown_table(image_metrics),
         "selected_strategy": summary["selected_strategy"],
-        "transfer_gain": f"{summary['transfer_gain']:.2f}",
-        "augmentation_gain": f"{summary['augmentation_gain']:.2f}",
+        "error_review_model": image_audit.get("error_review_model", "fine_tune"),
+        "transfer_gain": _format_percent(summary["transfer_gain"]),
+        "augmentation_gain": _format_percent(summary["augmentation_gain"]),
         "loss_diagnosis_table": markdown_table(diagnosis),
         "loss_images": "\n".join(
             [
@@ -72,6 +73,7 @@ def build_report_context(data, diagnosis, summary):
             ]
         ),
         "series_metrics_table": markdown_table(series_metrics),
+        "comparison_table": markdown_table(comparison.fillna("N/A")),
         "residual_gain": _format_percent(summary["residual_gain"]),
         "selected_baseline": series_audit["selected_baseline"],
         "rnn_mae": f"{summary['rnn_mae']:.4f}",
@@ -121,7 +123,7 @@ def render_final_performance_plot(metrics, output, track):
     if track == "vision":
         ranked = metrics.loc[metrics.split == "Test", ["model", "accuracy"]].copy()
         ranked["score"] = ranked.accuracy * 100
-        ranked = ranked.sort_values("score", ascending=False)
+        ranked = ranked.sort_values("score", ascending=False, kind="stable")
         title = "Vision models — Test accuracy"
         xlabel = "Accuracy (%) · higher is better"
         value_format = "{:.2f}%"
@@ -143,7 +145,13 @@ def render_final_performance_plot(metrics, output, track):
     ax.grid(axis="x", alpha=0.2)
     ax.set_axisbelow(True)
     for position, (bar, score) in enumerate(zip(bars, ranked.score)):
-        rank = "  BEST" if position == 0 else "  WORST" if position == len(ranked) - 1 else ""
+        rank = (
+            "  BEST"
+            if position == 0
+            else "  WORST"
+            if position == len(ranked) - 1
+            else ""
+        )
         ax.text(
             bar.get_width() + ranked.score.max() * 0.015,
             bar.get_y() + bar.get_height() / 2,

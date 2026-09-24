@@ -90,6 +90,14 @@ def test_vision_pipeline_exports_matched_splits_and_review(
     assert not (output / "errors.zip").exists()
     audit = json.loads((output / "audit.json").read_text())
     assert audit["membership_sha256"] == sha256(output / "membership.csv")
+    winner = (
+        metrics.loc[metrics.split == "Test"]
+        .sort_values("accuracy", ascending=False, kind="stable")
+        .iloc[0]
+        .model
+    )
+    assert audit["error_review_model"] == winner
+    assert set(review.model) <= {winner}
     with pytest.raises(FileExistsError):
         vision.run(tmp_path, output, epochs=1)
 
@@ -152,3 +160,66 @@ def test_timeseries_pipeline_exports_predictions_and_audit(tmp_path, save_checkp
     )
     with pytest.raises(FileExistsError):
         timeseries.run(csv, output, epochs=1)
+
+
+@pytest.mark.parametrize(
+    "winner", ["scratch", "linear_probe", "fine_tune", "augmented"]
+)
+def test_exports_validation_errors_of_test_winner(
+    tmp_path, offline_vision, monkeypatch, winner
+):
+    import torch
+
+    from diagnostics.vision.data import _preprocessing
+
+    prepared = vision.pipeline.prepare_data(tmp_path, 1, 1, 1, 42)
+    lookup = {}
+    transform = _preprocessing()
+    for source, indices in [
+        (prepared.train_source, prepared.indices["Train"]),
+        (prepared.train_source, prepared.indices["Validation"]),
+        (prepared.test_source, prepared.test_indices),
+    ]:
+        for i in indices:
+            image, label = source[i]
+            lookup[transform(image).numpy().tobytes()] = [3, 4, 5].index(label)
+    bad = transform(prepared.train_source[prepared.indices["Validation"][1]][0])
+    lookup[bad.numpy().tobytes()] = 0
+
+    class Classifier(nn.Module):
+        def __init__(self, strategy):
+            super().__init__()
+            self.strategy = strategy
+
+        def forward(self, images):
+            labels = [
+                lookup[x.numpy().tobytes()] if self.strategy == winner else 0
+                for x in images
+            ]
+            return torch.nn.functional.one_hot(torch.tensor(labels), 3).float() * 5
+
+    monkeypatch.setattr(
+        "diagnostics.vision.pipeline.build_model",
+        lambda strategy, **kwargs: Classifier(strategy),
+    )
+    monkeypatch.setattr(
+        "diagnostics.vision.pipeline.fit",
+        lambda *args: pd.DataFrame([{"epoch": 1, "Train": 1.0, "Validation": 1.0}]),
+    )
+    output = tmp_path / "vision"
+    vision.run(tmp_path, output, epochs=1, shots=1, validation=1, test_per_class=1)
+    metrics = pd.read_csv(output / "metrics.csv")
+    assert len(metrics) == 12
+    assert (
+        metrics.loc[
+            (metrics.model == winner) & (metrics.split == "Test"), "accuracy"
+        ].iloc[0]
+        == 1
+    )
+    review = pd.read_csv(output / "error_review.csv")
+    assert review[["model", "actual", "predicted"]].to_dict("records") == [
+        {"model": winner, "actual": "deer", "predicted": "cat"}
+    ]
+    assert (
+        json.loads((output / "audit.json").read_text())["error_review_model"] == winner
+    )

@@ -25,5 +25,15 @@
   "membership_sha256": "2a124f2a74a3fca5aea650bac4bd1004a1d13add33d7903901a7f740efc6e806",
   "exact_duplicate_check": "passed",
   "linear_probe_batchnorm": "frozen",
-  "improvement": "Predeclared brightness/crop/flip augmentation + weight decay; not human-reviewed causality"
+  "improvement": "Predeclared brightness/crop/flip augmentation + weight decay; not human-reviewed causality",
+  "strategies": [
+    "scratch",
+    "linear_probe",
+    "fine_tune",
+    "augmented"
+  ],
+  "error_review_model": "linear_probe",
+  "error_review_split": "Validation",
+  "error_review_selection": "Test accuracy descending; ties keep experiment order",
+  "error_review_reconstruction": "Seed 42 / 10 epochs reproduced: Test labels, predictions, confidence and full loss history matched saved reference (float tolerance 1e-5)"
 }
