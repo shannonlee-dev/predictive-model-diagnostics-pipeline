@@ -1,0 +1,16 @@
+{
+  "parameters": {
+    "window": 20,
+    "hidden": 16,
+    "lr": 0.003,
+    "weight_decay": 0.001,
+    "batch": 32,
+    "loss": "mse",
+    "config_id": 3233
+  },
+  "validation": {
+    "win_fraction": 0.8888888888888888,
+    "mean_gain": 0.29941182162946944,
+    "worst_gain": 0.0
+  }
+}

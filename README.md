@@ -132,6 +132,18 @@ cp -R reports/reference reports/reference-copy
 diagnostics report --run reports/reference-copy
 ```
 
+### 잔차 LSTM 하이퍼파라미터 탐색
+
+```bash
+python scripts/tune_residual_lstm.py --output reports/residual-search-repeat --workers 4
+```
+
+입력 길이·hidden 크기·학습률·weight decay·배치 크기·손실함수의 3,600개 조합을 탐색한다. 상위 24개를 3개 시간 구간 × 3개 seed로 비교하고, Validation으로 고정한 설정 하나를 Test에서 10개 seed로 평가한다. 새 결과는 지정한 출력 경로의 `report.md`, 선택한 값은 `selected.json`에서 확인한다. 실제 Naive 대비 개선이 없으면 그대로 기록한다.
+
+완료한 [탐색 결과](reports/residual-search/report.md)에서는 Validation 9회 중 8회 이긴 설정도 Test에서는 승리 0회·동률 2회·패배 8회였다. 평균 MAE는 Naive 5.07368 대비 5.11044로 약 0.72% 악화됐다. **Naive를 꾸준히 이기는 설정을 확보하지 못했으며, 추가 탐색을 종료하고 기존 기본값을 유지한다.**
+
+출력 경로는 새 디렉터리를 사용한다. Test 평가 전에 중단된 탐색은 같은 명령에 `--resume`을 추가해 이어서 실행할 수 있다. 최대 학습 횟수는 `--epochs`(기본 60), 조합 수는 `--trials`(기본 전체 3,600)로 지정한다. 기존 기준 실험의 Test를 이미 확인했으므로 이번 결과도 완전히 새로운 데이터에서의 검증으로 해석하지 않는다.
+
 ### 별도 시계열 CSV
 
 ```bash

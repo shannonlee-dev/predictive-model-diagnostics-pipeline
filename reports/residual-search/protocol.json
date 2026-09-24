@@ -1,0 +1,97 @@
+{
+  "dataset_sha256": "e69f57818556319986a9f485d55f954976161a1dae7c2e21154aadcaf8931eb2",
+  "search_space": {
+    "window": [
+      5,
+      10,
+      20,
+      30,
+      60
+    ],
+    "hidden": [
+      4,
+      8,
+      16,
+      24,
+      32,
+      64
+    ],
+    "lr": [
+      3e-05,
+      0.0001,
+      0.0003,
+      0.001,
+      0.003
+    ],
+    "weight_decay": [
+      0.0,
+      0.001,
+      0.01,
+      0.1
+    ],
+    "batch": [
+      32,
+      64,
+      256
+    ],
+    "loss": [
+      "mae",
+      "mse"
+    ]
+  },
+  "trials": 3600,
+  "max_epochs": 60,
+  "patience": 10,
+  "checkpoint_metric": "Validation MAE; initialized Naive included",
+  "screen_seed": 42,
+  "folds": [
+    [
+      0.5,
+      0.6
+    ],
+    [
+      0.6,
+      0.7
+    ],
+    [
+      0.7,
+      0.8
+    ]
+  ],
+  "validation_seeds": [
+    7,
+    17,
+    42
+  ],
+  "test_seeds": [
+    7,
+    17,
+    42,
+    67,
+    101,
+    202,
+    340,
+    512,
+    777,
+    1024
+  ],
+  "test_start": "2024-01-03",
+  "selection": "highest validation win fraction (>0.01% gain), then mean gain",
+  "test_policy": "evaluate only the frozen selected config; do not retune after Test",
+  "historical_test_note": "Test has already been inspected in the reference experiment; not a pristine holdout",
+  "script_sha256": "ed15a17fe1e16c36578e027edccbc6c12a5a09b97dcc701793f73a855ed37170",
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.14.0+cpu",
+    "device": "cpu",
+    "threads_per_worker": 1,
+    "workers": 4
+  },
+  "completed": {
+    "screen": 3600,
+    "validation": 216,
+    "test": 10,
+    "predictions": 250
+  },
+  "verification": "Test perturbation invariance; full distinct grid; 24 x 9 validation rows; frozen selection; all metrics recomputed from predictions"
+}
