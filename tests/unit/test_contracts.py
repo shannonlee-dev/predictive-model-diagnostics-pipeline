@@ -200,7 +200,6 @@ def test_timeseries_fit_restores_best_validation_state():
     model = build_timeseries_model("LSTM")
     history = fit_timeseries(
         model,
-        False,
         loader,
         {"Train": (inputs, target), "Validation": (inputs, target)},
         2,
@@ -271,3 +270,61 @@ def test_default_seed_is_shared_by_cli_and_experiments():
     from diagnostics.timeseries.pipeline import DEFAULT_SEED as timeseries_seed
 
     assert cli_seed == timeseries_seed == DEFAULT_SEED == 42
+
+
+@pytest.mark.parametrize("kind", ["invalid", "LTSM", "lstm", ""])
+def test_recurrent_model_rejects_unsupported_kind(kind):
+    from diagnostics.timeseries import RecurrentForecaster
+    from diagnostics.timeseries import build_model as build_timeseries_model
+
+    for constructor in (RecurrentForecaster, build_timeseries_model):
+        with pytest.raises(ValueError, match="kind"):
+            constructor(kind)
+
+
+def test_vision_build_model_rejects_unsupported_strategy():
+    with pytest.raises(ValueError, match="strategy"):
+        build_model("invalid", pretrained=False)
+
+
+def test_vision_fit_rejects_unsupported_strategy():
+    from diagnostics.vision import fit
+
+    model = build_model("scratch", pretrained=False)
+    with pytest.raises(ValueError, match="strategy"):
+        fit(model, "invalid", [], {}, 1)
+
+
+@pytest.mark.parametrize("residual, decay", [(False, 0.0), (True, 0.01)])
+def test_timeseries_fit_regularization_follows_model(residual, decay):
+    import torch
+    from torch.utils.data import DataLoader, TensorDataset
+
+    from diagnostics.timeseries import RecurrentForecaster, fit
+
+    # Zero loss leaves only AdamW decay: one step must scale nonzero weights.
+    model = RecurrentForecaster("RNN", residual=residual)
+    inputs = torch.zeros(2, 3, 1)
+    target = model(inputs).detach()
+    before = model.core.weight_ih_l0.detach().clone()
+    loader = DataLoader(TensorDataset(inputs, target), batch_size=2)
+    history = fit(model, loader, {"Validation": (inputs, target)}, 1)
+    torch.testing.assert_close(
+        model.core.weight_ih_l0, before * (1 - 0.001 * decay), rtol=0, atol=1e-8
+    )
+    assert len(history) == 1
+
+
+def test_timeseries_training_does_not_import_pipeline():
+    import ast
+    import inspect
+
+    from diagnostics.timeseries import training
+
+    tree = ast.parse(inspect.getsource(training))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            assert "pipeline" not in (node.module or "").split(".")
+            assert all(alias.name != "pipeline" for alias in node.names)
+        elif isinstance(node, ast.Import):
+            assert all("pipeline" not in alias.name.split(".") for alias in node.names)

@@ -8,7 +8,7 @@ import torch
 from torch import nn
 from torchvision import models
 
-from ..constants import RESNET18_WEIGHTS_NAME
+from ..constants import RESNET18_WEIGHTS_NAME, VISION_STRATEGIES
 from .data import SELECTED_CIFAR10_CLASS_IDS
 
 EARLY_STOPPING_PATIENCE = 4
@@ -17,7 +17,15 @@ FULL_MODEL_LEARNING_RATE = 0.0003
 AUGMENTED_WEIGHT_DECAY = 0.01
 
 
+def _validate_strategy(strategy):
+    if strategy not in VISION_STRATEGIES:
+        raise ValueError(
+            f"Unsupported vision strategy: {strategy!r}; expected one of {VISION_STRATEGIES}"
+        )
+
+
 def build_model(strategy, pretrained=True):
+    _validate_strategy(strategy)
     model = models.resnet18(
         weights=models.ResNet18_Weights[RESNET18_WEIGHTS_NAME] if pretrained else None
     )
@@ -49,6 +57,7 @@ def evaluate(model, loader):
 
 
 def fit(model, strategy, train_loader, evaluation, epochs):
+    _validate_strategy(strategy)
     optimizer = torch.optim.AdamW(
         filter(lambda p: p.requires_grad, model.parameters()),
         lr=(

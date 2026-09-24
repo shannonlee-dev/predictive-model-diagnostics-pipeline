@@ -16,6 +16,10 @@ EARLY_STOPPING_PATIENCE = 8
 class RecurrentForecaster(nn.Module):
     def __init__(self, kind="LSTM", hidden=RECURRENT_HIDDEN_SIZE, residual=False):
         super().__init__()
+        if kind not in {"RNN", "LSTM"}:
+            raise ValueError(
+                f"Unsupported recurrent kind: {kind!r}; expected RNN or LSTM"
+            )
         self.core = (nn.LSTM if kind == "LSTM" else nn.RNN)(1, hidden, batch_first=True)
         self.head = nn.Linear(hidden, 1)
         self.residual = residual
@@ -45,11 +49,11 @@ def predict(model, inputs):
     return model(inputs).numpy()
 
 
-def fit(model, residual, train_loader, evaluation, epochs):
+def fit(model, train_loader, evaluation, epochs):
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=RECURRENT_LEARNING_RATE,
-        weight_decay=RESIDUAL_WEIGHT_DECAY if residual else 0,
+        weight_decay=RESIDUAL_WEIGHT_DECAY if model.residual else 0,
     )
     best, best_loss, stale = None, float("inf"), 0
     history = []
@@ -78,10 +82,3 @@ def fit(model, residual, train_loader, evaluation, epochs):
             break
     model.load_state_dict(best)
     return pd.DataFrame(history)
-
-
-def train_model(prepared, kind, epochs, seed, residual=False):
-    """Compatibility import for the original training entry point."""
-    from .pipeline import train_model as pipeline_train_model
-
-    return pipeline_train_model(prepared, kind, epochs, seed, residual)

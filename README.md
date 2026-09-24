@@ -33,7 +33,7 @@ flowchart LR
     R --> O["Markdown·CSV·그래프·오류 갤러리"]
 ```
 
-일반 기능은 flat 모듈로 두고, 분석·표현·템플릿이 함께 쓰이는 리포트만 패키지로 묶었다.
+실험 트랙은 `data / training / evaluation(시계열) 또는 artifacts(이미지) / pipeline` 책임으로 분리했다. 리포트는 `inputs / analysis / render / pipeline / templates`로 나누며, 각 패키지의 `__init__.py`는 좁은 공개 API를 제공한다.
 
 ```text
 src/diagnostics/
@@ -44,13 +44,13 @@ src/diagnostics/
 ├── reproducibility.py   seed·결정적 실행 설정
 ├── prepare.py           데이터·가중치 준비
 ├── timeseries/
-│   ├── __init__.py      기존 공개 함수·설정 import 경로
+│   ├── __init__.py      공개 API
 │   ├── data.py          시계열 검증·분할·정규화·윈도우
 │   ├── evaluation.py    인과적 베이스라인·회귀 지표
 │   ├── training.py      순환 모델·학습
 │   └── pipeline.py      실험 실행·파일 저장
 ├── vision/
-│   ├── __init__.py      기존 공개 함수·설정 import 경로
+│   ├── __init__.py      공개 API
 │   ├── data.py          표본 분할·중복 검사·이미지 변환
 │   ├── training.py      ResNet 구성·학습·평가
 │   ├── artifacts.py     검수용 오류 이미지·CSV 저장

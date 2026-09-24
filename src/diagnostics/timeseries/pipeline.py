@@ -44,7 +44,7 @@ def train_model(prepared, kind, epochs, seed, residual=False):
     X, indices, train_loader, evaluation = _training_data(prepared)
     seed_everything(seed)
     model = build_model(kind, residual=residual)
-    history = fit(model, residual, train_loader, evaluation, epochs)
+    history = fit(model, train_loader, evaluation, epochs)
     prediction = predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
     return model, history, prediction
 
@@ -87,7 +87,7 @@ def run(
     ]:
         seed_everything(seed)
         model = build_model(kind, residual=residual)
-        history = fit(model, residual, train_loader, evaluation, epochs)
+        history = fit(model, train_loader, evaluation, epochs)
         prediction = (
             predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
         )

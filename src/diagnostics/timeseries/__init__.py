@@ -5,7 +5,7 @@ from .data import prepare_series as prepare_series
 from .evaluation import baseline_predictions as baseline_predictions
 from .evaluation import metrics as metrics
 from .pipeline import run as run
+from .pipeline import train_model as train_model
 from .training import RecurrentForecaster as RecurrentForecaster
 from .training import build_model as build_model
 from .training import fit as fit
-from .training import train_model as train_model
