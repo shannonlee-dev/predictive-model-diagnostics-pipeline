@@ -14,12 +14,14 @@ from .evaluation import metrics as metrics
 from .pipeline import DEFAULT_EPOCHS as DEFAULT_EPOCHS
 from .pipeline import DEFAULT_SEED as DEFAULT_SEED
 from .pipeline import DEFAULT_WINDOW as DEFAULT_WINDOW
+from .pipeline import RECURRENT_BATCH_SIZE as RECURRENT_BATCH_SIZE
 from .pipeline import run as run
 from .training import EARLY_STOPPING_PATIENCE as EARLY_STOPPING_PATIENCE
 from .training import GRADIENT_CLIP_NORM as GRADIENT_CLIP_NORM
-from .training import RECURRENT_BATCH_SIZE as RECURRENT_BATCH_SIZE
 from .training import RECURRENT_HIDDEN_SIZE as RECURRENT_HIDDEN_SIZE
 from .training import RECURRENT_LEARNING_RATE as RECURRENT_LEARNING_RATE
 from .training import RESIDUAL_WEIGHT_DECAY as RESIDUAL_WEIGHT_DECAY
 from .training import RecurrentForecaster as RecurrentForecaster
+from .training import build_model as build_model
+from .training import fit as fit
 from .training import train_model as train_model

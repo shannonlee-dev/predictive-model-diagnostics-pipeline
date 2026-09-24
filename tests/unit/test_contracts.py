@@ -173,6 +173,44 @@ def test_invalid_series_and_window_fail_instead_of_silent_repair(tmp_path):
         prepare_series(frame(), 70)
 
 
+def test_timeseries_build_model_selects_recurrent_kind():
+    import torch
+
+    from diagnostics.timeseries import build_model as build_timeseries_model
+
+    rnn = build_timeseries_model("RNN")
+    lstm = build_timeseries_model("LSTM", residual=True)
+    assert isinstance(rnn.core, torch.nn.RNN)
+    assert isinstance(lstm.core, torch.nn.LSTM)
+    assert lstm.residual is True
+
+
+def test_timeseries_fit_restores_best_validation_state():
+    import torch
+    from torch.utils.data import DataLoader, TensorDataset
+
+    from diagnostics.timeseries import build_model as build_timeseries_model
+    from diagnostics.timeseries import fit as fit_timeseries
+    from diagnostics.timeseries.training import _evaluate, _predict
+
+    torch.manual_seed(42)
+    inputs = torch.randn(8, 10, 1)
+    target = torch.randn(8)
+    loader = DataLoader(TensorDataset(inputs, target), batch_size=4, shuffle=False)
+    model = build_timeseries_model("LSTM")
+    history = fit_timeseries(
+        model,
+        False,
+        loader,
+        {"Train": (inputs, target), "Validation": (inputs, target)},
+        2,
+    )
+    assert list(history) == ["epoch", "Train", "Validation"]
+    assert len(history) == 2
+    assert _evaluate(model, inputs, target) == pytest.approx(history.Validation.min())
+    assert np.isfinite(_predict(model, inputs)).all()
+
+
 def test_short_training_produces_finite_test_predictions():
     from diagnostics.timeseries import train_model
 

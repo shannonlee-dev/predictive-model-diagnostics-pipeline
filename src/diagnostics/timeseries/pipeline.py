@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 import torch
+from torch.utils.data import DataLoader, TensorDataset
 
 from ..constants import (
     DEFAULT_SEED,
@@ -12,12 +13,44 @@ from ..constants import (
 )
 from ..io import sha256, write_json
 from ..plotting import loss_plot
+from ..reproducibility import seed_everything
 from .data import load_series, prepare_series
 from .evaluation import baseline_predictions, metrics
-from .training import train_model
+from .training import _predict, build_model, fit
 
 DEFAULT_EPOCHS = TIMESERIES_DEFAULT_EPOCHS
 DEFAULT_WINDOW = TIMESERIES_DEFAULT_WINDOW
+TRAIN_BATCH_SIZE = 64
+RECURRENT_BATCH_SIZE = TRAIN_BATCH_SIZE  # Preserve the public constant.
+
+
+def _training_data(prepared):
+    X = torch.from_numpy(prepared["X"])
+    y = torch.from_numpy(prepared["y"])
+    indices = prepared["indices"]
+    train_loader = DataLoader(
+        TensorDataset(X[indices["Train"]], y[indices["Train"]]),
+        batch_size=TRAIN_BATCH_SIZE,
+        shuffle=False,
+    )
+    evaluation = {
+        split: (X[idx], y[idx])
+        for split, idx in indices.items()
+        if split != "Test"
+    }
+    return X, indices, train_loader, evaluation
+
+
+def train_model(prepared, kind, epochs, seed, residual=False):
+    """Preserve the original training API for existing callers."""
+    X, indices, train_loader, evaluation = _training_data(prepared)
+    seed_everything(seed)
+    model = build_model(kind, residual=residual)
+    history = fit(model, residual, train_loader, evaluation, epochs)
+    prediction = (
+        _predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
+    )
+    return model, history, prediction
 
 
 def run(csv, output, epochs=DEFAULT_EPOCHS, seed=DEFAULT_SEED, window=DEFAULT_WINDOW):
@@ -43,12 +76,19 @@ def run(csv, output, epochs=DEFAULT_EPOCHS, seed=DEFAULT_SEED, window=DEFAULT_WI
         for n, p in baselines.items()
     }
     selected_baseline = min(baseline_validation, key=baseline_validation.get)
+    X, indices, train_loader, evaluation = _training_data(prepared)
     for name, kind, residual in [
         ("RNN", "RNN", False),
         ("LSTM", "LSTM", False),
         ("LSTM_residual", "LSTM", True),
     ]:
-        model, history, prediction = train_model(prepared, kind, epochs, seed, residual)
+        seed_everything(seed)
+        model = build_model(kind, residual=residual)
+        history = fit(model, residual, train_loader, evaluation, epochs)
+        prediction = (
+            _predict(model, X[indices["Test"]]) * prepared["std"]
+            + prepared["mean"]
+        )
         history.to_csv(output / f"{name}_history.csv", index=False)
         loss_plot(history, output / f"{name}_loss.png", name + " (standardized MSE)")
         torch.save(
