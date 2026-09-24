@@ -22,7 +22,6 @@ def review_csv(tmp_path):
                 actual="cat",
                 predicted="dog",
                 confidence=0.9,
-                suggested_tag="occlusion",
                 human_tag="",
             )
             for i in range(31)
@@ -47,6 +46,7 @@ def test_review_cli_succeeds_without_threshold(review_csv, count, monkeypatch, c
     )
     html = (review_csv.parent / "error_gallery.html").read_text()
     assert f"Human reviewed: {count}/31" in html
+    assert "suggestion:" not in html
     assert "required" not in html
     assert (review_csv.parent / "error_gallery.png").is_file()
 

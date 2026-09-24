@@ -46,9 +46,9 @@ CNN은 공간상의 국소 패턴을 학습하고, RNN은 순서대로 hidden st
 
 ![실제 Validation 오분류 사례](vision/error_gallery.png)
 
-[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 Validation 오분류를 포함한다. suggested_tag는 자동 가설이며, 실제 관찰에 따른 human_tag만 사람 검수 통계에 포함한다.
+[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 Validation 오분류를 포함한다. 실제 관찰에 따른 human_tag만 사람 검수 통계에 포함한다.
 
-사람이 확인한 실패 원인 통계 (미검수 상태에서는 비어 있음):
+사람이 확인한 실패 원인 통계:
 
 {{ human_tag_counts }}
 

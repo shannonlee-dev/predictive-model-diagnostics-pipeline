@@ -92,13 +92,12 @@ def test_linear_probe_freezes_backbone_including_batchnorm():
     assert all(p.requires_grad for p in model.fc.parameters())
 
 
-def test_human_review_not_inferred_from_suggested_tags(tmp_path):
+def test_human_review_only_counts_explicit_tags(tmp_path):
     path = tmp_path / "review.csv"
     pd.DataFrame(
         [
             {
                 "sample_id": "1",
-                "suggested_tag": "low_resolution",
                 "human_tag": "",
             }
         ]

@@ -16,7 +16,7 @@ Few-shot 이미지 분류와 일별 환율 예측에서 **어떤 모델이 더 �
 - 시계열은 시간순 7/1/2로 분할하고 Train 통계로만 정규화한다.
 - checkpoint와 베이스라인 선택에는 Validation을 사용하고, Test에서 최종 성능을 비교한다.
 - CSV·실험 기록에서 Markdown 리포트와 그래프를 생성한다. 성능이 나빠진 비교도 음수 개선률로 표시한다.
-- 자동 오류 태그는 가설로 취급하고, 사람이 작성하는 `human_tag`와 구분한다.
+- 오분류의 `human_tag`는 사람이 직접 확인해 작성한다.
 
 ## 아키텍처
 
@@ -161,7 +161,7 @@ diagnostics review --csv reports/my-run/vision/error_review.csv
 diagnostics report --run reports/my-run
 ```
 
-빈 태그는 미검수로 처리하고, 중복 ID나 허용되지 않은 태그는 오류로 처리한다. 현재 CLI는 검수 건수가 0이어도 완료할 수 있다. 자동 `suggested_tag`는 사람이 확인한 실패 원인을 대신하지 않는다.
+빈 태그는 미검수로 처리하고, 중복 ID나 허용되지 않은 태그는 오류로 처리한다. 현재 CLI는 검수 건수가 0이어도 완료할 수 있다.
 
 ## 산출물과 데이터
 

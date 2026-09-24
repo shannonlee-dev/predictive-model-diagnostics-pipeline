@@ -81,6 +81,7 @@ def test_vision_pipeline_exports_matched_splits_and_review(
                 == membership.loc[membership.split == split, "sample_id"].tolist()
             )
     review = pd.read_csv(output / "error_review.csv")
+    assert "suggested_tag" not in review.columns
     assert set(review.sample_id) <= set(
         membership.loc[membership.split == "Validation", "sample_id"]
     )
