@@ -1,6 +1,0 @@
-..............                                                           [100%]
-14 passed in 3.18s
-All checks passed!
-9 files already formatted
-Artifact validation passed: metrics, hashes, split/sample IDs, 94 actual errors, local links, overwrite refusal, human-review gate.
-Editable installation and diagnostics CLI verified.

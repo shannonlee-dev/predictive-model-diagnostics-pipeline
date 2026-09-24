@@ -86,12 +86,19 @@ def test_report_completion_depends_on_tracks(tmp_path, monkeypatch, count):
     frame.to_csv(path, index=False)
     monkeypatch.setattr("sys.argv", ["diagnostics", "report", "--run", str(root)])
     main()
-    status = json.loads((root / "status.json").read_text())
-    assert status["experiments_complete"] is True
-    assert status["human_review"]["reviewed"] == count
-    assert "complete" not in status["human_review"]
-    assert "submission_ready" not in status
-    assert "선택적인 오류 분석" in (root / "diagnosis.md").read_text()
+    status = json.loads((root / "vision/review_status.json").read_text())
+    assert status["reviewed"] == count
+    for obsolete in [
+        "status.json",
+        "loss_diagnosis.csv",
+        "vision/confusion_counts.csv",
+        "vision/suggested_tag_counts.csv",
+        "timeseries/improvements_percent.csv",
+    ]:
+        assert not (root / obsolete).exists()
+    assert 'src="errors/' in (root / "vision/error_gallery.html").read_text()
+    assert not (root / "vision/errors.zip").exists()
+    assert "최소 30건" in (root / "diagnosis.md").read_text()
     before = {
         p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
     }

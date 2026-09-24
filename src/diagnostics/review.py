@@ -80,7 +80,4 @@ def gallery(path):
     fig.tight_layout()
     fig.savefig(path.parent / "error_gallery.png", dpi=120)
     plt.close(fig)
-    frame.suggested_tag.value_counts().rename_axis("suggested_tag").to_csv(
-        path.parent / "suggested_tag_counts.csv", header=["count"]
-    )
     return result

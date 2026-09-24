@@ -34,9 +34,7 @@ def _training_data(prepared):
         shuffle=False,
     )
     evaluation = {
-        split: (X[idx], y[idx])
-        for split, idx in indices.items()
-        if split != "Test"
+        split: (X[idx], y[idx]) for split, idx in indices.items() if split != "Test"
     }
     return X, indices, train_loader, evaluation
 
@@ -47,13 +45,18 @@ def train_model(prepared, kind, epochs, seed, residual=False):
     seed_everything(seed)
     model = build_model(kind, residual=residual)
     history = fit(model, residual, train_loader, evaluation, epochs)
-    prediction = (
-        predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
-    )
+    prediction = predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
     return model, history, prediction
 
 
-def run(csv, output, epochs=DEFAULT_EPOCHS, seed=DEFAULT_SEED, window=DEFAULT_WINDOW):
+def run(
+    csv,
+    output,
+    epochs=DEFAULT_EPOCHS,
+    seed=DEFAULT_SEED,
+    window=DEFAULT_WINDOW,
+    save_checkpoints=False,
+):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     frame = load_series(csv)
@@ -86,22 +89,22 @@ def run(csv, output, epochs=DEFAULT_EPOCHS, seed=DEFAULT_SEED, window=DEFAULT_WI
         model = build_model(kind, residual=residual)
         history = fit(model, residual, train_loader, evaluation, epochs)
         prediction = (
-            predict(model, X[indices["Test"]]) * prepared["std"]
-            + prepared["mean"]
+            predict(model, X[indices["Test"]]) * prepared["std"] + prepared["mean"]
         )
         history.to_csv(output / f"{name}_history.csv", index=False)
         loss_plot(history, output / f"{name}_loss.png", name + " (standardized MSE)")
-        torch.save(
-            {
-                "state_dict": model.state_dict(),
-                "kind": kind,
-                "residual": residual,
-                "mean": prepared["mean"],
-                "std": prepared["std"],
-                "window": window,
-            },
-            output / f"{name}.pt",
-        )
+        if save_checkpoints:
+            torch.save(
+                {
+                    "state_dict": model.state_dict(),
+                    "kind": kind,
+                    "residual": residual,
+                    "mean": prepared["mean"],
+                    "std": prepared["std"],
+                    "window": window,
+                },
+                output / f"{name}.pt",
+            )
         predictions[name] = prediction
         rows.append({"model": name, **metrics(actual, prediction)})
         print(f"{name}: {rows[-1]}", flush=True)

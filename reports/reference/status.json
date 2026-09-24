@@ -1,8 +1,0 @@
-{
-  "experiments_complete": true,
-  "human_review": {
-    "total_errors": 94,
-    "reviewed": 0,
-    "human_tag_counts": {}
-  }
-}

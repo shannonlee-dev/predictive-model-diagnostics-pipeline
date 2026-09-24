@@ -45,6 +45,11 @@ def main():
             ),
         )
         command.add_argument("--seed", type=int, default=DEFAULT_SEED)
+        command.add_argument(
+            "--save-checkpoints",
+            action="store_true",
+            help="also save trained model weights (.pt)",
+        )
         if name == "timeseries":
             command.add_argument("--csv", type=Path, default=DEFAULT_SERIES_CSV)
             command.add_argument(

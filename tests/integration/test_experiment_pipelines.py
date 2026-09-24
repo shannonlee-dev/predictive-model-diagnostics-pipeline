@@ -5,7 +5,6 @@ import json
 import numpy as np
 import pandas as pd
 import pytest
-import torch
 from PIL import Image
 from torch import nn
 
@@ -41,10 +40,21 @@ def offline_vision(monkeypatch):
     return Samples
 
 
-def test_vision_pipeline_exports_matched_splits_and_review(tmp_path, offline_vision):
+@pytest.mark.parametrize("save_checkpoints", [False, True])
+def test_vision_pipeline_exports_matched_splits_and_review(
+    tmp_path, offline_vision, save_checkpoints
+):
     output = tmp_path / "vision"
     assert (
-        vision.run(tmp_path, output, epochs=1, shots=1, validation=1, test_per_class=1)
+        vision.run(
+            tmp_path,
+            output,
+            epochs=1,
+            shots=1,
+            validation=1,
+            test_per_class=1,
+            save_checkpoints=save_checkpoints,
+        )
         == output
     )
     membership = pd.read_csv(output / "membership.csv")
@@ -59,10 +69,12 @@ def test_vision_pipeline_exports_matched_splits_and_review(tmp_path, offline_vis
     assert len(metrics) == 12
     assert np.isfinite(metrics[["accuracy", "loss"]]).all().all()
     for strategy in metrics.model.unique():
-        assert (output / f"{strategy}.pt").is_file()
+        assert (output / f"{strategy}.pt").is_file() == save_checkpoints
         history = pd.read_csv(output / f"{strategy}_history.csv")
         assert list(history) == ["epoch", "Train", "Validation"]
-        for split in ["Train", "Validation", "Test"]:
+        for split in ["Train", "Validation"]:
+            assert not (output / f"{strategy}_{split}_predictions.csv").exists()
+        for split in ["Test"]:
             predictions = pd.read_csv(output / f"{strategy}_{split}_predictions.csv")
             assert (
                 predictions.sample_id.tolist()
@@ -74,6 +86,7 @@ def test_vision_pipeline_exports_matched_splits_and_review(tmp_path, offline_vis
     )
     assert review.human_tag.isna().all()
     assert all((output / image).is_file() for image in review.image)
+    assert not (output / "errors.zip").exists()
     audit = json.loads((output / "audit.json").read_text())
     assert audit["membership_sha256"] == sha256(output / "membership.csv")
     with pytest.raises(FileExistsError):
@@ -92,11 +105,19 @@ def test_vision_rejects_duplicate_content_before_training(
     monkeypatch.setattr(offline_vision, "__init__", identical_samples)
     output = tmp_path / "vision"
     with pytest.raises(ValueError, match="Identical image content"):
-        vision.run(tmp_path, output, epochs=1, shots=1, validation=1, test_per_class=1)
+        vision.run(
+            tmp_path,
+            output,
+            epochs=1,
+            shots=1,
+            validation=1,
+            test_per_class=1,
+        )
     assert list(output.iterdir()) == []
 
 
-def test_timeseries_pipeline_exports_predictions_and_audit(tmp_path):
+@pytest.mark.parametrize("save_checkpoints", [False, True])
+def test_timeseries_pipeline_exports_predictions_and_audit(tmp_path, save_checkpoints):
     csv = tmp_path / "series.csv"
     pd.DataFrame(
         {
@@ -105,7 +126,10 @@ def test_timeseries_pipeline_exports_predictions_and_audit(tmp_path):
         }
     ).to_csv(csv, index=False)
     output = tmp_path / "timeseries"
-    assert timeseries.run(csv, output, epochs=1) == output
+    assert (
+        timeseries.run(csv, output, epochs=1, save_checkpoints=save_checkpoints)
+        == output
+    )
     predictions = pd.read_csv(output / "predictions.csv")
     metrics = pd.read_csv(output / "metrics.csv")
     baselines = pd.read_csv(output / "baselines_before_training.csv")
@@ -113,11 +137,7 @@ def test_timeseries_pipeline_exports_predictions_and_audit(tmp_path):
     assert set(predictions.columns) == {"date", "actual", *metrics.model}
     pd.testing.assert_frame_equal(metrics.iloc[: len(baselines)], baselines)
     for name in ["RNN", "LSTM", "LSTM_residual"]:
-        checkpoint = torch.load(output / f"{name}.pt", weights_only=True)
-        model = timeseries.RecurrentForecaster(
-            checkpoint["kind"], residual=checkpoint["residual"]
-        )
-        model.load_state_dict(checkpoint["state_dict"])
+        assert (output / f"{name}.pt").is_file() == save_checkpoints
         actual = predictions.actual.to_numpy()
         expected = timeseries.metrics(actual, predictions[name].to_numpy())
         assert metrics.set_index("model").loc[name, "MAE"] == pytest.approx(

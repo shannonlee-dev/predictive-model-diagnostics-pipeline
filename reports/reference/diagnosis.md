@@ -2,9 +2,9 @@
 
 ## 실험 및 상태
 
-Seed 42, 이미지 클래스 cat, deer, dog. 클래스당 Train 40장, Validation 150장, Test 250장. 원본 이미지의 식별자와 SHA-256을 membership.csv에 기록하고 분할 간 동일 이미지 바이트 중복을 검사했다. 시계열은 DEXKOUS 1249개 관측이다. 두 트랙 모두 Validation loss로 checkpoint를 선택했다. 모든 비교군과 증강 설정은 실행 전에 고정했다.
+Seed 42, 이미지 클래스 cat, deer, dog. 클래스당 Train 40장, Validation 150장, Test 250장. 입력 시계열은 1249개 관측이다.
 
-사람 검수: **0/94건**. 사람 검수는 선택적인 오류 분석 절차이며 집계는 분석 보조 정보다. 실험 완료 여부는 두 트랙의 정상 완료로 판단한다. 자동 suggested_tag는 가설이며 실제 원인 또는 human review로 간주하지 않는다.
+사람 검수: **0/94건**. CLI는 미검수 상태에서도 리포트를 생성하지만, 미션 제출에는 실제 오분류 최소 30건을 사람이 확인하고 실패 원인을 태깅해야 한다.
 
 ## 이미지 실측 비교
 
@@ -23,7 +23,7 @@ Seed 42, 이미지 클래스 cat, deer, dog. 클래스당 Train 40장, Validatio
 | augmented | Validation | 0.7790 | 0.7267 |
 | augmented | Test | 0.7569 | 0.7147 |
 
-Validation loss 기준 선택 전략: **linear_probe**. 동일 예산의 scratch 대비 Fine-tuning Test 정확도 차이: **33.20%p**. 증강 + weight decay 적용은 기본 Fine-tuning 대비 **-3.87%p**다. 증강 실험은 사전 지정한 민감도 실험이며 사람의 원인 태깅으로 검증한 인과적 개선이 아니다. 한 seed·적은 epoch의 결과이므로 최적의 freezing 전략으로 일반화할 수 없다. 사전학습의 외부 ImageNet 데이터와 추가 학습 비용도 비교 한계다.
+Validation loss 기준 선택 전략: **linear_probe**. 동일 예산의 scratch 대비 Fine-tuning Test 정확도 차이는 **33.20%p**이고, 증강 + weight decay는 기본 Fine-tuning 대비 **-3.87%p**다. 이 결과는 한 seed의 사전 지정 실험이며 인과적 개선이나 최적 전략을 보장하지 않는다.
 
 ## 학습 곡선과 편향·분산
 
@@ -37,20 +37,14 @@ Validation loss 기준 선택 전략: **linear_probe**. 동일 예산의 scratch
 | LSTM | 50 | 0.0170 | 0.0162 | -0.0008 | 큰 일반화 격차 없음; 절대 오차·베이스라인과 함께 편향 판단 |
 | LSTM_residual | 1 | 0.0074 | 0.0097 | 0.0023 | 큰 일반화 격차 없음; 절대 오차·베이스라인과 함께 편향 판단 |
 
-곡선은 증강 없는 Train 평가와 Validation 평가를 동일한 eval 모드에서 측정했다. 이미지 loss는 cross entropy, 시계열 loss는 Train 통계로 표준화한 값의 MSE다. Validation/Train > 1.5는 격차를 찾기 위한 휴리스틱일 뿐 확정 진단이 아니다. 무작위 3-class 분류의 cross entropy 기준은 ln(3) ≈ 1.099다. Train·Validation이 모두 이 수준이고 정확도도 1/3 근처면 높은 편향이나 학습 부족을 의심한다. Train만 낮고 Validation이 높으면 소표본 과적합을 의심하고 증강·weight decay·early stopping을 비교한다. 분포 이동도 같은 격차를 만들 수 있다.
+Validation/Train > 1.5는 격차를 찾기 위한 휴리스틱이며 확정 진단이 아니다. Train·Validation 손실, 정확도, 베이스라인, 데이터 분포를 함께 해석해야 한다.
 
 ![scratch Train/Validation loss](vision/scratch_loss.png)
-
 ![linear_probe Train/Validation loss](vision/linear_probe_loss.png)
-
 ![fine_tune Train/Validation loss](vision/fine_tune_loss.png)
-
 ![augmented Train/Validation loss](vision/augmented_loss.png)
-
 ![RNN Train/Validation loss](timeseries/RNN_loss.png)
-
 ![LSTM Train/Validation loss](timeseries/LSTM_loss.png)
-
 ![LSTM_residual Train/Validation loss](timeseries/LSTM_residual_loss.png)
 
 ## 시계열 실측과 개선
@@ -68,28 +62,74 @@ Validation loss 기준 선택 전략: **linear_probe**. 동일 예산의 scratch
 | LSTM | 8.0968 | 11.1204 | 0.5881 | 0 |
 | LSTM_residual | 5.0918 | 6.8393 | 0.3733 | 0 |
 
-기본 LSTM 대비 마지막 관측값에 변화량을 더하는 LSTM_residual의 MAE 개선률은 **37.11%**다. 잔차 모델은 Naive를 초기 예측으로 두고 변화량만 학습한다. 금융 시계열에 jittering/time-warping을 적용하지 않았다. Validation MAE 기준 베이스라인 선택은 **Naive**이며 Test로 파라미터를 고르지 않았다. [각 베이스라인 대비 개선률](baseline_comparison.md)의 음수도 그대로 보고한다. 딥러닝이 Naive보다 나쁘다면 복잡성 증가를 정당화할 수 없다.
+기본 LSTM 대비 LSTM_residual의 MAE 개선률은 **37.11%**다. Validation MAE 기준 선택 베이스라인은 **Naive**이며 Test로 파라미터를 고르지 않았다.
 
 ![예측과 실제](timeseries/predictions.png)
 
 ![베이스라인 비교](timeseries/baseline_comparison.png)
 
+시계열 Test 평균은 Train 평균보다 144.95 KRW/USD 차이가 난다. 이번 평가는 거래일 기준 rolling one-step 예측이며 장기 예측 성능을 의미하지 않는다. RNN MAE는 7.9137, LSTM MAE는 8.0968다.
+
 ## 데이터 특성 및 모델 구조
 
-이미지는 클래스 균형을 맞췄으므로 이 실험의 클래스 불균형은 없다. 원본 32×32 영상을 128×128로 확대해도 새로운 세부 정보가 생기지 않는다. cat/deer/dog의 형태적 유사성과 배경 의존 가능성을 실제 오류 이미지와 클래스별 혼동 통계로 확인해야 한다. 낮은 해상도 자체가 모든 실패의 원인이라는 결론은 내리지 않는다.
+이미지 입력 크기는 128×128이며, 확대만으로 새로운 세부 정보가 생기지는 않는다. 클래스 cat, deer, dog의 형태적 유사성과 배경 의존 가능성은 실제 오류 이미지와 클래스별 혼동 통계로 확인해야 한다. 시계열 입력은 30개 관측값으로 구성된다.
 
-시계열 Test 평균은 Train 평균보다 144.95 KRW/USD 차이가 난다. 표준화된 가격 수준을 직접 예측하는 신경망이 학습 범위 밖 수준으로 일반화하기 어려운지 확인할 근거다. Naive는 최근 수준을 즉시 반영하며 SMA는 변동을 완화하지만 급격한 변화에 늦게 반응한다. 지표는 환율 거래일 1-step rolling 평가이며 전체 Test를 한 번에 예측하는 장기 예측이 아니다.
+CNN은 공간상의 국소 패턴을 학습하고, RNN은 순서대로 hidden state를 갱신한다. LSTM은 gate와 cell state를 통해 장기 정보 경로를 추가하지만, 이번 결과만으로 장기 기억의 우월성을 증명할 수 없다.
 
-CNN은 공간상의 국소 패턴을 공유 필터로 학습한다. RNN은 순서대로 hidden state를 갱신하므로 시계열에 적합하지만 긴 역전파에서 gradient 소실·폭주가 생길 수 있다. LSTM은 input/forget/output gate와 cell state를 추가해 장기 정보 유지 경로를 만든다. 이번 동일 30-step 실험의 RNN MAE는 7.9137, LSTM MAE는 8.0968다. 이 결과만으로 장기 기억의 우월성을 증명하지는 않는다. 장기 기억 효과를 분리하려면 더 긴 window 및 반복 seed 실험이 추가로 필요하다.
+### 클래스별 Test 혼동 통계
+
+| model | actual | predicted | count |
+| --- | --- | --- | --- |
+| scratch | cat | cat | 63 |
+| scratch | cat | deer | 77 |
+| scratch | cat | dog | 110 |
+| scratch | deer | cat | 39 |
+| scratch | deer | deer | 137 |
+| scratch | deer | dog | 74 |
+| scratch | dog | cat | 64 |
+| scratch | dog | deer | 70 |
+| scratch | dog | dog | 116 |
+| linear_probe | cat | cat | 181 |
+| linear_probe | cat | deer | 19 |
+| linear_probe | cat | dog | 50 |
+| linear_probe | deer | cat | 26 |
+| linear_probe | deer | deer | 205 |
+| linear_probe | deer | dog | 19 |
+| linear_probe | dog | cat | 44 |
+| linear_probe | dog | deer | 16 |
+| linear_probe | dog | dog | 190 |
+| fine_tune | cat | cat | 174 |
+| fine_tune | cat | deer | 25 |
+| fine_tune | cat | dog | 51 |
+| fine_tune | deer | cat | 31 |
+| fine_tune | deer | deer | 199 |
+| fine_tune | deer | dog | 20 |
+| fine_tune | dog | cat | 44 |
+| fine_tune | dog | deer | 14 |
+| fine_tune | dog | dog | 192 |
+| augmented | cat | cat | 178 |
+| augmented | cat | deer | 20 |
+| augmented | cat | dog | 52 |
+| augmented | deer | cat | 31 |
+| augmented | deer | deer | 181 |
+| augmented | deer | dog | 38 |
+| augmented | dog | cat | 59 |
+| augmented | dog | deer | 14 |
+| augmented | dog | dog | 177 |
 
 ## 오류 진단 및 사람 검수
 
 ![실제 Validation 오분류 사례](vision/error_gallery.png)
 
-[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 기본 Fine-tuning의 실제 Validation 오분류 전체를 포함한다. suggested_tag는 밝기·신뢰도 기반 가설이다. 원한다면 실제 관찰에 따른 human_tag를 적고 diagnostics review로 갤러리와 통계를 갱신한다. 허용된 human_tag가 작성된 고유 사례만 사람 검수 및 태그별 건수에 포함한다. 검수 건수는 모델 실험 완료 조건이 아니다.
+[오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 Validation 오분류를 포함한다. suggested_tag는 자동 가설이며, 실제 관찰에 따른 human_tag만 사람 검수 통계에 포함한다.
 
-낮은 Train 정확도와 클래스 전반의 혼동은 모델/학습 예산 문제를 먼저 점검한다. 낮은 Train loss와 특정 배경·조명에 집중한 Validation 오류는 데이터 다양성 문제를 점검한다. 라벨 오류 의심은 원본 대조 후 별도 기록하고 Test 라벨을 수정해 성능을 높이지 않는다. 사람 태그의 상위 실패 원인을 바탕으로 다음 개선을 선택하고 새로운 실험 디렉터리에 기록해야 사람 분석 → 개선의 사이클이 완성된다.
+사람이 확인한 실패 원인 통계 (미검수 상태에서는 비어 있음):
+
+| human_tag | count |
+| --- | --- |
+
+원본 오류 이미지는 `vision/errors/`에 보관하며 HTML 갤러리에서 모두 확인할 수 있다.
 
 ## 재현 및 누수 근거
 
-[누수 방지·실행 정책](../../docs/protocol.md), 각 트랙 audit.json, predictions.csv, history.csv, 이미지 membership.csv 및 [베이스라인 비교](baseline_comparison.md)를 함께 확인한다. 학습 가중치와 원본 데이터는 로컬 data/ 및 결과 디렉터리에 남기되 Git에는 포함하지 않는다.
+[누수 방지·실행 정책](../../docs/protocol.md), 각 트랙 audit.json, predictions.csv, history.csv, membership.csv 및 [베이스라인 비교](baseline_comparison.md)를 함께 확인한다.

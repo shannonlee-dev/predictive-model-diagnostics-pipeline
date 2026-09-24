@@ -3,9 +3,11 @@
 import re
 from pathlib import Path
 
+import pandas as pd
+
 from ..constants import TIMESERIES_MODELS
 from ..io import markdown_table
-from .analysis import HIGH_VARIANCE_RATIO
+from .analysis import HIGH_VARIANCE_RATIO, build_confusion_counts
 
 TEMPLATE_TOKEN_PATTERN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z_0-9]*)\s*\}\}")
 
@@ -32,6 +34,15 @@ def build_report_context(data, diagnosis, summary):
     image_metrics = data.image_metrics
     series_metrics = data.series_metrics
     return {
+        "confusion_table": markdown_table(
+            build_confusion_counts(data.image_predictions, image_audit["classes"])
+        ),
+        "human_tag_counts": markdown_table(
+            pd.DataFrame(
+                list(data.review_status["human_tag_counts"].items()),
+                columns=["human_tag", "count"],
+            )
+        ),
         "seed": image_audit["seed"],
         "shots": image_audit["shots"],
         "validation_per_class": image_audit["validation_per_class"],

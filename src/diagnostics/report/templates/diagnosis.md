@@ -4,7 +4,7 @@
 
 Seed {{ seed }}, 이미지 클래스 {{ classes }}. 클래스당 Train {{ shots }}장, Validation {{ validation_per_class }}장, Test {{ test_per_class }}장. 입력 시계열은 {{ observations }}개 관측이다.
 
-사람 검수: **{{ reviewed }}/{{ total_errors }}건**. 사람 검수는 선택적인 오류 분석 절차이며 실험 완료 조건이 아니다.
+사람 검수: **{{ reviewed }}/{{ total_errors }}건**. CLI는 미검수 상태에서도 리포트를 생성하지만, 미션 제출에는 실제 오분류 최소 30건을 사람이 확인하고 실패 원인을 태깅해야 한다.
 
 ## 이미지 실측 비교
 
@@ -38,11 +38,21 @@ Validation/Train > {{ ratio_threshold }}는 격차를 찾기 위한 휴리스틱
 
 CNN은 공간상의 국소 패턴을 학습하고, RNN은 순서대로 hidden state를 갱신한다. LSTM은 gate와 cell state를 통해 장기 정보 경로를 추가하지만, 이번 결과만으로 장기 기억의 우월성을 증명할 수 없다.
 
+### 클래스별 Test 혼동 통계
+
+{{ confusion_table }}
+
 ## 오류 진단 및 사람 검수
 
 ![실제 Validation 오분류 사례](vision/error_gallery.png)
 
 [오분류 갤러리](vision/error_gallery.html)와 [분석표](vision/error_review.csv)는 Validation 오분류를 포함한다. suggested_tag는 자동 가설이며, 실제 관찰에 따른 human_tag만 사람 검수 통계에 포함한다.
+
+사람이 확인한 실패 원인 통계 (미검수 상태에서는 비어 있음):
+
+{{ human_tag_counts }}
+
+원본 오류 이미지는 `vision/errors/`에 보관하며 HTML 갤러리에서 모두 확인할 수 있다.
 
 ## 재현 및 누수 근거
 

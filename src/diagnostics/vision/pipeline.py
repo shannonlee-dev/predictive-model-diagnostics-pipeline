@@ -46,20 +46,22 @@ def run(
     shots=DEFAULT_SHOTS_PER_CLASS,
     validation=DEFAULT_VALIDATION_PER_CLASS,
     test_per_class=DEFAULT_TEST_PER_CLASS,
+    save_checkpoints=False,
 ):
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
     seed_everything(seed)
-    prepared = prepare_data(
-        data, shots, validation, test_per_class, seed
-    )
+    prepared = prepare_data(data, shots, validation, test_per_class, seed)
     prepared.membership.to_csv(output / "membership.csv", index=False)
     evaluation = {
-        s: DataLoader(Images(prepared.train_source, ids), batch_size=EVALUATION_BATCH_SIZE)
+        s: DataLoader(
+            Images(prepared.train_source, ids), batch_size=EVALUATION_BATCH_SIZE
+        )
         for s, ids in prepared.indices.items()
     }
     test_loader = DataLoader(
-        Images(prepared.test_source, prepared.test_indices), batch_size=EVALUATION_BATCH_SIZE
+        Images(prepared.test_source, prepared.test_indices),
+        batch_size=EVALUATION_BATCH_SIZE,
     )
     rows = []
     for strategy in VISION_STRATEGIES:
@@ -79,7 +81,8 @@ def run(
         loss_plot(
             history, output / f"{strategy}_loss.png", strategy + " (cross entropy)"
         )
-        torch.save(model.state_dict(), output / f"{strategy}.pt")
+        if save_checkpoints:
+            torch.save(model.state_dict(), output / f"{strategy}.pt")
         for split, loader in {**evaluation, "Test": test_loader}.items():
             metric, probability, labels = evaluate(model, loader)
             rows.append({"model": strategy, "split": split, **metric})
@@ -91,6 +94,8 @@ def run(
                     labels,
                     output,
                 )
+            if split != "Test":
+                continue
             prediction_frame = pd.DataFrame(
                 {
                     "sample_id": [

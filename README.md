@@ -69,7 +69,7 @@ src/diagnostics/
 
 ## 저장된 실험 결과
 
-`reports/reference/`는 기존 실행의 기록이다. 현재 코드로 다시 학습한 결과를 뜻하지 않으며, 당시 환경과 소스 해시는 [execution.json](reports/reference/execution.json)에 남아 있다.
+`reports/reference/`는 기존 실행의 기록이다. 기존 실측 데이터를 사용해 현재 코드로 리포트를 재생성한 결과이며, 모델을 다시 학습한 결과는 아니다.
 
 | 이미지 전략 | Test 정확도 |
 | --- | ---: |
@@ -158,12 +158,14 @@ diagnostics report --run reports/my-run
 | `datasets/` | 동봉 환율 CSV와 수집 이력·SHA-256 |
 | `data/` | 다운로드 캐시와 준비된 데이터. Git 제외 |
 | `reports/<run>/timeseries/` | 지표·예측·학습 이력·분할 기록·그래프 |
-| `reports/<run>/vision/` | 지표·예측·이미지 분할 기록·오류 분석표·갤러리 |
+| `reports/<run>/vision/` | 지표·Test 예측·학습 이력·분할 기록·오류 분석표·갤러리·원본 이미지 |
 | `reports/<run>/diagnosis.md` | 종합 진단 리포트 |
 | `reports/<run>/baseline_comparison.md` | 베이스라인별 성능과 개선률 |
-| `reports/<run>/status.json` | 리포트 생성 시 실험 완료 상태와 검수 집계 |
+| `reports/<run>/vision/review_status.json` | 사람 검수 건수와 실패 원인별 통계 |
 
-학습 checkpoint(`.pt`)는 실행 경로에 저장하지만 Git에는 포함하지 않는다. 데이터·모델 출처는 [sources.md](docs/sources.md), 환율 수집 기록은 [provenance.json](datasets/provenance.json)을 확인한다.
+기본 출력은 리포트·필수 시각화와 재생성/검증에 필요한 원자료만 저장한다. 손실 진단·개선률·클래스별 혼동 통계는 Markdown에 포함하고 별도 CSV로 중복 저장하지 않는다. Train/Validation 개별 예측은 저장하지 않으며 해당 성능은 `metrics.csv`에 남긴다. 오류 원본은 `vision/errors/`에 개별 PNG로 저장하며 HTML 갤러리에서 확인할 수 있다.
+
+학습 checkpoint(`.pt`)는 기본적으로 저장하지 않는다. 가중치가 필요하면 `vision` 또는 `timeseries` 명령에 `--save-checkpoints`를 추가한다. Git에는 포함하지 않는다. 데이터·모델 출처는 [sources.md](docs/sources.md), 환율 수집 기록은 [provenance.json](datasets/provenance.json)을 확인한다.
 
 ## 개발 및 검증
 

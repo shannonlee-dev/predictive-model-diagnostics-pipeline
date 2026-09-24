@@ -2,11 +2,10 @@
 
 from pathlib import Path
 
-from ..io import markdown_table, write_json
+from ..io import markdown_table
 from ..review import gallery
 from .analysis import (
     build_baseline_comparison,
-    build_confusion_counts,
     build_loss_diagnosis,
     build_report_summary,
 )
@@ -27,9 +26,6 @@ def run(root):
     data = load_report_inputs(root)
     comparison = build_baseline_comparison(data.series_metrics)
     diagnosis = build_loss_diagnosis(data.histories)
-    confusion = build_confusion_counts(
-        data.image_predictions, data.image_audit["classes"]
-    )
     summary = build_report_summary(
         data.image_metrics,
         data.series_metrics,
@@ -50,13 +46,6 @@ def run(root):
     gallery(image / "error_review.csv")
     render_prediction_plot(data.predictions, series / "predictions.png")
     render_baseline_plot(data.series_metrics, series / "baseline_comparison.png")
-    comparison.to_csv(series / "improvements_percent.csv", index=False)
-    diagnosis.to_csv(root / "loss_diagnosis.csv", index=False)
-    confusion.to_csv(image / "confusion_counts.csv", index=False)
     (root / "diagnosis.md").write_text(diagnosis_document, encoding="utf-8")
     (root / "baseline_comparison.md").write_text(comparison_document, encoding="utf-8")
-    write_json(
-        root / "status.json",
-        {"experiments_complete": True, "human_review": data.review_status},
-    )
     return root
