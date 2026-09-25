@@ -14,8 +14,9 @@ from ..constants import (
 from ..io import sha256, write_json
 from ..plotting import loss_plot
 from ..reproducibility import seed_everything
+from .baselines import baseline_predictions
 from .data import load_series, prepare_series
-from .evaluation import baseline_predictions, metrics
+from .evaluation import metrics
 from .training import build_model, fit, predict
 
 DEFAULT_EPOCHS = TIMESERIES_DEFAULT_EPOCHS

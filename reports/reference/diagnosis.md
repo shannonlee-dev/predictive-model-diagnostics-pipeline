@@ -199,7 +199,7 @@ Look-ahead Bias는 예측 시점에 알 수 없는 미래 관측이나 미래에
 | 시계열 분할 | 시간순 70/10/20 분할, target 날짜로 split 결정 |
 | 스케일링 | `timeseries/data.py:prepare_series`에서 `values[:train_end]`의 mean/std만 사용 |
 | 윈도우 | 입력은 `[t-window,t)`로 target t와 미래를 제외 |
-| 피처 생성 | `timeseries/evaluation.py:baseline_predictions`에서 `shift(1)` 후 rolling/ewm |
+| 피처 생성 | `timeseries/baselines.py:baseline_predictions`에서 `shift(1)` 후 rolling/ewm |
 | 선택·평가 | Validation으로 checkpoint·baseline 선택, Test는 고정 모델의 rolling one-step 평가 |
 
 Validation/Test 첫 입력에 이전 split의 과거 관측을 포함하고 Test 내부의 과거 실측을 다음 날 입력으로 사용하는 것은 해당 예측 시점에 알려진 정보다. 전체 Test 기간을 한 번에 예측하는 방식과 구별한다. 미래 Test 값 변조에 대한 scaler·과거 입력 불변성은 계약 테스트로 확인한다.
