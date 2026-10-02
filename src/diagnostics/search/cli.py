@@ -1,174 +1,21 @@
-"""Reproducible CPU search; select on pre-Test data and evaluate one frozen setting."""
+"""CPU 잔차 LSTM 탐색의 데이터 준비·선택·평가 흐름을 조립한다."""
 
 import argparse
 import json
 import random
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from copy import deepcopy
 from itertools import product
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-import torch
-from torch import nn
 
 from diagnostics.io import sha256, write_json
 from diagnostics.timeseries.data import load_series
 from diagnostics.timeseries.evaluation import metrics
-from diagnostics.timeseries.training import RecurrentForecaster
 
-SPACE = {
-    "window": [5, 10, 20, 30, 60],
-    "hidden": [4, 8, 16, 24, 32, 64],
-    "lr": [0.00003, 0.0001, 0.0003, 0.001, 0.003],
-    "weight_decay": [0.0, 0.001, 0.01, 0.1],
-    "batch": [32, 64, 256],
-    "loss": ["mae", "mse"],
-}
-SEEDS = [7, 17, 42, 67, 101, 202, 340, 512, 777, 1024]
-FOLDS = [(0.5, 0.6), (0.6, 0.7), (0.7, 0.8)]
-
-
-def trial(job):
-    config, seed, train_end, validation_end, values, epochs, test = job
-    torch.set_num_threads(1)
-    torch.manual_seed(seed)
-    torch.use_deterministic_algorithms(True)
-    window = config["window"]
-    mean, std = values[:train_end].mean(), values[:train_end].std()
-    # During search even the arrays stop before Test.
-    limit = len(values) if test else validation_end
-    z = ((values[:limit] - mean) / std).astype(np.float32)
-    x = torch.from_numpy(
-        np.lib.stride_tricks.sliding_window_view(z, window)[:-1].copy()
-    ).unsqueeze(-1)
-    y = torch.from_numpy(z[window:].copy())
-    train_count, validation_count = train_end - window, validation_end - window
-    vx = x[train_count:validation_count]
-    actual = values[train_end:validation_end]
-    naive = values[train_end - 1 : validation_end - 1]
-    naive_mae = metrics(actual, naive)["MAE"]
-    model = RecurrentForecaster(hidden=config["hidden"], residual=True)
-    optimizer = torch.optim.AdamW(
-        model.parameters(), lr=config["lr"], weight_decay=config["weight_decay"]
-    )
-    loss_fn = (
-        nn.functional.l1_loss if config["loss"] == "mae" else nn.functional.mse_loss
-    )
-    # The initialized residual head is exactly Naive and is a valid fallback.
-    best, best_mae, best_epoch, stale = deepcopy(model.state_dict()), naive_mae, 0, 0
-    for epoch in range(1, epochs + 1):
-        model.train()
-        for start in range(0, train_count, config["batch"]):
-            batch_x = x[start : min(start + config["batch"], train_count)]
-            batch_y = y[start : min(start + config["batch"], train_count)]
-            optimizer.zero_grad(set_to_none=True)
-            loss = loss_fn(model(batch_x), batch_y)
-            loss.backward()
-            nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
-        model.eval()
-        with torch.no_grad():
-            correction = (model(vx) - vx[:, -1, 0]).numpy().astype(float) * std
-        validation_mae = metrics(actual, naive + correction)["MAE"]
-        if validation_mae < best_mae - 1e-8:
-            best, best_mae, best_epoch, stale = (
-                deepcopy(model.state_dict()),
-                validation_mae,
-                epoch,
-                0,
-            )
-        else:
-            stale += 1
-        if stale >= 10:
-            break
-    result = {
-        **config,
-        "seed": seed,
-        "train_end": train_end,
-        "validation_end": validation_end,
-        "best_epoch": best_epoch,
-        "epochs_run": epoch,
-        "naive_mae": naive_mae,
-        "mae": best_mae,
-        "gain_percent": 100 * (1 - best_mae / naive_mae),
-    }
-    if test:
-        model.load_state_dict(best)
-        model.eval()
-        with torch.no_grad():
-            tx = x[validation_count:]
-            correction = (model(tx) - tx[:, -1, 0]).numpy().astype(float) * std
-        prediction = values[validation_end - 1 : -1] + correction
-        result.update(
-            {
-                "test_" + key: value
-                for key, value in metrics(values[validation_end:], prediction).items()
-            }
-        )
-        result["prediction"] = prediction.tolist()
-    return result
-
-
-def run_jobs(jobs, output, workers):
-    rows = pd.read_csv(output).to_dict("records") if output.exists() else []
-    keys = {
-        (r["config_id"], r["seed"], r["train_end"], r["validation_end"]) for r in rows
-    }
-    total = len(jobs)
-    jobs = [j for j in jobs if (j[0]["config_id"], j[1], j[2], j[3]) not in keys]
-    with ProcessPoolExecutor(max_workers=workers) as executor:
-        futures = [executor.submit(trial, job) for job in jobs]
-        for future in as_completed(futures):
-            rows.append(future.result())
-            temporary = output.with_suffix(".tmp")
-            pd.DataFrame(rows).to_csv(temporary, index=False)
-            temporary.replace(output)
-            if len(rows) % 16 == 0 or len(rows) == total:
-                print(f"{output.name}: {len(rows)}/{total} completed", flush=True)
-    return pd.DataFrame(rows)
-
-
-def append_uncertainty(output):
-    """Paired moving-block bootstrap over dates, averaging per-seed absolute errors."""
-    frame = pd.read_csv(output / "predictions.csv")
-    columns = [f"seed_{seed}" for seed in SEEDS]
-    actual = frame.actual.to_numpy()
-    naive_error = np.abs(actual - frame.Naive.to_numpy())
-    model_error = np.abs(actual[:, None] - frame[columns].to_numpy()).mean(axis=1)
-    rng = np.random.default_rng(20260924)
-    n, block_size = len(frame), 10
-    starts = rng.integers(0, n, size=(5000, (n + block_size - 1) // block_size))
-    indices = ((starts[:, :, None] + np.arange(block_size)) % n).reshape(5000, -1)[
-        :, :n
-    ]
-    gains = 100 * (
-        1 - model_error[indices].mean(axis=1) / naive_error[indices].mean(axis=1)
-    )
-    lower, upper = np.quantile(gains, [0.025, 0.975])
-    paragraph = (
-        "\n## 개선의 불확실성\n\n"
-        f"날짜 순서의 상관을 고려한 10일 블록 bootstrap 5,000회에서, "
-        f"seed 평균 MAE 개선률의 95% 구간은 **{lower:.4f}% ~ {upper:.4f}%**다. "
-        "각 seed의 절대오차를 평균한 값이며 앙상블 예측 성능은 아니다. "
-        "고정된 모델의 평가 날짜 불확실성만 추정하며, 탐색에 따른 선택 편향이나 미래 분포 변화는 포함하지 않는다.\n"
-    )
-    paragraph += (
-        "0을 포함하므로 Naive보다 통계적으로 우수하다고 판단할 근거가 부족하다.\n"
-        if lower <= 0 <= upper
-        else "이 구간과 별도로 시기별 결과 및 새로운 기간의 검증이 필요하다.\n"
-    )
-    scores = pd.read_csv(output / "test.csv")
-    baseline = metrics(actual, frame.Naive.to_numpy())
-    paragraph += "\n| 지표 | Naive | 잔차 LSTM seed 평균 | 0.01% 초과 개선 seed |\n| --- | --- | --- | --- |\n"
-    for metric in ["MAE", "RMSE", "MAPE"]:
-        measured = scores[f"test_{metric}"]
-        wins = int((measured < baseline[metric] * 0.9999).sum())
-        paragraph += f"| {metric} | {baseline[metric]:.8f} | {measured.mean():.8f} | {wins}/10 |\n"
-    paragraph += "\n여러 seed는 동일 Test 날짜를 공유하므로 독립된 10개 시장 표본을 뜻하지 않는다.\n"
-    with (output / "report.md").open("a", encoding="utf-8") as report:
-        report.write(paragraph)
+from .config import FOLDS, SEEDS, SPACE
+from .execution import run_jobs
+from .reporting import append_uncertainty
 
 
 def main():
@@ -328,7 +175,3 @@ Train 구간으로만 정규화하고 Validation MAE로 체크포인트를 선�
         f"DONE: Test wins {wins}/10; mean gain {results.test_gain_percent.mean():.4f}%",
         flush=True,
     )
-
-
-if __name__ == "__main__":
-    main()

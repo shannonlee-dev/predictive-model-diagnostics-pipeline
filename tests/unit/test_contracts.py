@@ -126,6 +126,7 @@ def test_recurrent_predictions_do_not_share_sample_context():
     torch.testing.assert_close(together[1:], changed[1:])
 
 
+@pytest.mark.smoke
 def test_residual_model_starts_at_naive():
     import torch
 
@@ -264,6 +265,7 @@ def test_series_metadata_is_derived_from_observed_dates():
     }
 
 
+@pytest.mark.smoke
 def test_default_seed_is_shared_by_cli_and_experiments():
     from diagnostics.cli import DEFAULT_SEED as cli_seed
     from diagnostics.timeseries.pipeline import DEFAULT_SEED as timeseries_seed

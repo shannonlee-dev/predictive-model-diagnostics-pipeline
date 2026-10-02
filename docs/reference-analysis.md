@@ -89,28 +89,38 @@ cat↔dog는 Fine-tuning 오류 185건 중 95건(51.35%)이다. 클래스 구별
 from pathlib import Path
 import pandas as pd
 
-root = Path('reports/reference/vision')
-review = pd.read_csv(root / 'fine_tune_error_review.csv')
-print(review.groupby('human_tag').agg(
-    count=('sample_id', 'size'), mean_confidence=('confidence', 'mean')))
-models = ['scratch', 'linear_probe', 'fine_tune', 'augmented']
+root = Path("reports/reference/vision")
+review = pd.read_csv(root / "fine_tune_error_review.csv")
+print(
+    review.groupby("human_tag").agg(
+        count=("sample_id", "size"), mean_confidence=("confidence", "mean")
+    )
+)
+models = ["scratch", "linear_probe", "fine_tune", "augmented"]
 predictions = {
-    model: pd.read_csv(root / f'{model}_Test_predictions.csv').set_index('sample_id')
+    model: pd.read_csv(root / f"{model}_Test_predictions.csv").set_index("sample_id")
     for model in models
 }
-first = predictions['scratch']
+first = predictions["scratch"]
 for frame in predictions.values():
     assert frame.index.is_unique and set(frame.index) == set(first.index)
     assert frame.actual.reindex(first.index).equals(first.actual)
 wrong = pd.DataFrame({m: f.actual.ne(f.predicted) for m, f in predictions.items()})
-print('all models:', wrong.all(axis=1).sum())
-print('all transfer:', wrong[models[1:]].all(axis=1).sum())
-print('fine wrong / probe right:', (wrong.fine_tune & ~wrong.linear_probe).sum())
-print('fine right / probe wrong:', (~wrong.fine_tune & wrong.linear_probe).sum())
-fine = predictions['fine_tune']
-print('fine errors:', wrong.fine_tune.sum())
-print('cat/dog:', (((fine.actual == 0) & (fine.predicted == 2)) |
-                   ((fine.actual == 2) & (fine.predicted == 0))).sum())
-series = pd.read_csv('datasets/krw_2020_2024.csv').value
-print('level std / diff std / lag1:', series.std(), series.diff().std(), series.autocorr())
+print("all models:", wrong.all(axis=1).sum())
+print("all transfer:", wrong[models[1:]].all(axis=1).sum())
+print("fine wrong / probe right:", (wrong.fine_tune & ~wrong.linear_probe).sum())
+print("fine right / probe wrong:", (~wrong.fine_tune & wrong.linear_probe).sum())
+fine = predictions["fine_tune"]
+print("fine errors:", wrong.fine_tune.sum())
+print(
+    "cat/dog:",
+    (
+        ((fine.actual == 0) & (fine.predicted == 2))
+        | ((fine.actual == 2) & (fine.predicted == 0))
+    ).sum(),
+)
+series = pd.read_csv("datasets/krw_2020_2024.csv").value
+print(
+    "level std / diff std / lag1:", series.std(), series.diff().std(), series.autocorr()
+)
 ```

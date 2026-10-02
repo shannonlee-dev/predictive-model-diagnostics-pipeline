@@ -6,3 +6,10 @@ data/
 .cache/
 *.pt
 *.part
+
+# 개발 도구의 캐시와 빌드 산출물
+.ruff_cache/
+build/
+dist/
+.coverage
+htmlcov/

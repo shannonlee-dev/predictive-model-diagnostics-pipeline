@@ -1,4 +1,4 @@
-# Predictive Model Diagnostics Pipeline
+# 예측 모델 진단 파이프라인
 
 ## 프로젝트 소개
 
@@ -20,6 +20,18 @@ Few-shot 이미지 분류와 일별 환율 예측에서 **어떤 모델이 더 �
 
 ## 아키텍처
 
+| 경로 | 역할 |
+| --- | --- |
+| `src/diagnostics/cli.py`, `constants.py` | 명령 조립과 공유 기본값 |
+| `src/diagnostics/prepare.py` | 데이터·사전학습 가중치 준비 |
+| `src/diagnostics/timeseries/` | 시계열 검증·분할·인과적 기준선·순환 모델·평가 |
+| `src/diagnostics/vision/` | 이미지 분할·전이학습·평가·오류 산출물 |
+| `src/diagnostics/search/` | 탐색 설정·단일 학습·병렬 실행·불확실성·CLI |
+| `src/diagnostics/report/`, `review.py` | 입력 검증·진단 계산·보고서·사람 검수 |
+| `tests/unit/`, `tests/integration/` | 데이터 계약·모델·보고서·CLI 회귀 테스트 |
+| `datasets/`, `reports/reference/` | 출처가 기록된 환율 입력과 기존 실측 결과 |
+| `pyproject.toml`, `uv.lock` | CPU 패키지 출처·고정 의존성·개발 도구 |
+
 ```mermaid
 flowchart LR
     P["prepare: 데이터·가중치 캐시"] --> V["vision: 이미지 실험"]
@@ -33,39 +45,7 @@ flowchart LR
     R --> O["Markdown·CSV·그래프·오류 갤러리"]
 ```
 
-실험 트랙은 `data / training / evaluation(시계열) 또는 artifacts(이미지) / pipeline` 책임으로 분리했다. 리포트는 `inputs / analysis / render / pipeline / templates`로 나누며, 각 패키지의 `__init__.py`는 좁은 공개 API를 제공한다.
-
-```text
-src/diagnostics/
-├── cli.py               명령 진입점
-├── constants.py         모듈 간 공유 설정
-├── io.py                파일·표 직렬화
-├── plotting.py          공통 학습 곡선
-├── reproducibility.py   seed·결정적 실행 설정
-├── prepare.py           데이터·가중치 준비
-├── timeseries/
-│   ├── __init__.py      공개 API
-│   ├── data.py          시계열 검증·분할·정규화·윈도우
-│   ├── evaluation.py    인과적 베이스라인·회귀 지표
-│   ├── training.py      순환 모델·학습
-│   └── pipeline.py      실험 실행·파일 저장
-├── vision/
-│   ├── __init__.py      공개 API
-│   ├── data.py          표본 분할·중복 검사·이미지 변환
-│   ├── training.py      ResNet 구성·학습·평가
-│   ├── artifacts.py     검수용 오류 이미지·CSV 저장
-│   └── pipeline.py      실험 실행·파일 저장
-├── review.py            검수 집계·오류 갤러리
-└── report/
-    ├── __init__.py      공개 진입점 run()
-    ├── inputs.py        입력 로딩·검증
-    ├── analysis.py      모델 선택·성능 비교·진단 계산
-    ├── render.py        Markdown·그래프 표현
-    ├── pipeline.py      실행 순서·파일 저장
-    └── templates/      Markdown 본문
-```
-
-리포트 문구는 `templates/`, 계산 방식은 `analysis.py`, 입력 계약은 `inputs.py`에서 수정한다. 전처리·분할·학습 조건은 [실험 정책](docs/protocol.md)에 정리했다.
+실험 트랙은 데이터·학습·평가·저장 책임으로 나누고, 보고서는 입력·분석·렌더링·조립으로 분리합니다. 잔차 LSTM 탐색은 `search/`의 설정·학습 작업·병렬 실행·보고 모듈을 사용합니다. 리포트 문구는 `report/templates/`, 계산 방식은 `report/analysis.py`, 입력 계약은 `report/inputs.py`에서 관리합니다. 전처리·분할·학습 조건은 [실험 정책](docs/protocol.md)에 정리했습니다.
 
 ## 저장된 실험 결과
 
@@ -89,37 +69,29 @@ src/diagnostics/
 
 ## 설치
 
-Python 3.10 이상이 필요하며 현재 실험 코드는 CPU에서 실행된다. 아래는 Linux/macOS 셸 기준이다. 저장소를 내려받은 뒤 **프로젝트 루트에서** 실행한다.
+Python 3.12와 uv를 사용합니다. 저장소 루트에서 실행합니다.
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
-python -m pip install -e '.[test]'
-diagnostics --help
+uv sync --frozen
+uv run --frozen diagnostics --help
 ```
 
-설치에는 네트워크가 필요하다. 이미지·가중치는 `prepare`에서 내려받으며 이후 실험은 로컬 캐시를 사용한다. 환율 CSV는 저장소에 포함돼 있어 시계열 실험만 할 때는 `prepare`가 필요 없다.
+`uv.lock`은 기존 CPU 실험 환경의 고정 버전을 유지합니다. `torch`와 `torchvision`만 공식 PyTorch CPU 인덱스에서 설치하고 나머지 패키지는 PyPI에서 설치합니다. 개발 환경도 같은 잠금 파일을 사용하며 별도 `PYTHONPATH`가 필요하지 않습니다.
 
-기존 Linux/Python 3.12 CPU 환경의 패키지 버전은 [requirements.lock.txt](requirements.lock.txt)에 기록했다. 해당 버전으로 설치하려면 위 패키지 설치 두 명령 대신 다음을 사용한다. 다른 플랫폼에서의 설치 가능성이나 동일한 수치 결과를 보장하지는 않는다.
-
-```bash
-python -m pip install -r requirements.lock.txt --extra-index-url https://download.pytorch.org/whl/cpu
-python -m pip install -e . --no-deps
-```
+이미지·가중치는 `prepare`에서 내려받고 이후 실험은 로컬 캐시를 사용합니다. 환율 CSV는 저장소에 포함되어 시계열 실험만 할 때는 `prepare`가 필요 없습니다. 설치 버전이 같아도 플랫폼에 따른 동일 수치 결과까지 보장하지는 않습니다.
 
 ## 새 실험 실행
 
 ```bash
 # CIFAR-10·사전학습 가중치 다운로드 및 동봉 환율 CSV 복사
-diagnostics prepare --data data
+uv run --frozen diagnostics prepare --data data
 
 # 각 --output은 아직 존재하지 않는 경로여야 한다
-diagnostics timeseries --output reports/my-run/timeseries --epochs 50
-diagnostics vision --data data --output reports/my-run/vision --epochs 10
+uv run --frozen diagnostics timeseries --output reports/my-run/timeseries --epochs 50
+uv run --frozen diagnostics vision --data data --output reports/my-run/vision --epochs 10
 
 # 두 트랙이 완료되면 종합 리포트 생성
-diagnostics report --run reports/my-run
+uv run --frozen diagnostics report --run reports/my-run
 ```
 
 결과는 `reports/my-run/diagnosis.md`부터 확인한다. `timeseries`와 `vision`은 기존 출력 디렉터리가 있으면 중단한다. 재실행할 때는 새 경로를 지정한다. `report`와 `review`는 지정한 실행의 파생 문서·통계·그림을 갱신하므로, 보존할 결과는 먼저 복사한다.
@@ -129,13 +101,13 @@ diagnostics report --run reports/my-run
 ```bash
 # reports/reference-copy가 없는 상태에서 실행
 cp -R reports/reference reports/reference-copy
-diagnostics report --run reports/reference-copy
+uv run --frozen diagnostics report --run reports/reference-copy
 ```
 
 ### 잔차 LSTM 하이퍼파라미터 탐색
 
 ```bash
-python scripts/tune_residual_lstm.py --output reports/residual-search-repeat --workers 4
+uv run --frozen diagnostics-search --output reports/residual-search-repeat --workers 4
 ```
 
 입력 길이·hidden 크기·학습률·weight decay·배치 크기·손실함수의 3,600개 조합을 탐색한다. 상위 24개를 3개 시간 구간 × 3개 seed로 비교하고, Validation으로 고정한 설정 하나를 Test에서 10개 seed로 평가한다. 새 결과는 지정한 출력 경로의 `report.md`, 선택한 값은 `selected.json`에서 확인한다. 실제 Naive 대비 개선이 없으면 그대로 기록한다.
@@ -147,7 +119,7 @@ python scripts/tune_residual_lstm.py --output reports/residual-search-repeat --w
 ### 별도 시계열 CSV
 
 ```bash
-diagnostics timeseries --csv /path/to/series.csv --output reports/custom-run/timeseries
+uv run --frozen diagnostics timeseries --csv /path/to/series.csv --output reports/custom-run/timeseries
 ```
 
 필수 열은 `date,value`다. `ticker`가 있으면 단일 값이어야 한다. 날짜 중복·결측, 비유한값·0 이하 값을 거부하며, 최소 700개 관측과 1,095일의 기간, 날짜 간격 중앙값 1일을 검사한다. 보간이나 결측 제거는 이 명령에서 자동으로 수행하지 않는다.
@@ -157,8 +129,8 @@ diagnostics timeseries --csv /path/to/series.csv --output reports/custom-run/tim
 `vision/errors/`의 원본 이미지를 확인하고, `vision/error_review.csv`의 `human_tag`에 관찰한 오류 원인을 기록한다. `vision/error_gallery.png`에는 대표 사례 최대 30건이 표시된다. 허용 태그는 [실험 정책](docs/protocol.md)을 따른다.
 
 ```bash
-diagnostics review --csv reports/my-run/vision/error_review.csv
-diagnostics report --run reports/my-run
+uv run --frozen diagnostics review --csv reports/my-run/vision/error_review.csv
+uv run --frozen diagnostics report --run reports/my-run
 ```
 
 빈 태그는 미검수로 처리하고, 중복 ID나 허용되지 않은 태그는 오류로 처리한다. 현재 CLI는 검수 건수가 0이어도 완료할 수 있다.
@@ -181,12 +153,15 @@ diagnostics report --run reports/my-run
 ## 개발 및 검증
 
 ```bash
-python -m pytest -q
-python -m ruff check src tests
-python -m ruff format --check src tests
+make check
+make test
+make smoke
+make build
 ```
 
-`tests/unit/`은 시계열 누수 방지·분할·모델 동결·리포트 계산 등을, `tests/integration/`은 CLI·검수·리포트 산출물과 입력 오류 시 기존 결과 보존을 확인한다. 테스트는 동봉 결과와 작은 입력을 사용하며 외부 데이터 다운로드나 전체 실험 재학습을 요구하지 않는다.
+`make check`는 문서·문법·Ruff 정적 분석과 포맷을 확인합니다. `make test`는 `uv run --frozen pytest -q`로 전체 단위·통합 테스트를, `make smoke`는 같은 테스트 중 `smoke` 마커가 붙은 짧은 실행 검사를 수행합니다. CI도 같은 잠금 파일과 명령을 사용합니다.
+
+`tests/unit/`은 시계열 누수 방지·분할·모델 동결·리포트 계산을, `tests/integration/`은 CLI·검수·산출물과 실패 시 기존 결과 보존을 확인합니다. 테스트는 임시 경로와 작은 입력을 사용하며 외부 데이터 다운로드나 전체 실험 재학습을 요구하지 않습니다.
 
 ## 해석 범위
 
