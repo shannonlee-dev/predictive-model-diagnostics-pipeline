@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==84.0.0"]
+requires = ["setuptools==84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,15 +10,15 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "torch==2.14.0+cpu",
-    "torchvision==0.29.0+cpu",
-    "numpy==2.5.3",
-    "pandas==3.0.6",
+    "torchvision==0.29.2",
+    "numpy==2.5.4",
+    "pandas==3.1.0",
     "matplotlib==3.11.2",
-    "pillow==12.3.0",
+    "pillow==13.0.0",
 ]
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "ruff==0.16.9"]
+dev = ["pytest==9.2.0", "ruff==0.17.3"]
 
 [project.scripts]
 diagnostics = "diagnostics.cli:main"
@@ -44,7 +44,7 @@ select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.uv]
 constraint-dependencies = [
-    "setuptools==84.0.0",
+    "setuptools==84.2.1",
     "contourpy==1.4.0",
     "cycler==0.12.1",
     "filelock==3.32.3",
